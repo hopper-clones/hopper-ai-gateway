@@ -25,6 +25,7 @@ func (s *Server) registerManagementV8Routes() {
 	v8.GET("/usage/feed", s.mgmt.GetUsageFeed)
 	v8.POST("/usage/feed/ack", s.mgmt.AckUsageFeed)
 	v8.GET("/usage/feed/cursors", s.mgmt.GetUsageFeedCursors)
+	v8.DELETE("/usage/feed/cursors/:consumer", s.mgmt.DeleteUsageFeedCursor)
 	v8.POST("/lane-keys", s.mgmt.CreateLaneKey)
 	v8.GET("/lane-keys", s.mgmt.ListLaneKeys)
 	v8.DELETE("/lane-keys/:id", s.mgmt.DeleteLaneKey)

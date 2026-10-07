@@ -9,6 +9,10 @@ import (
 // DefaultUsageFeedDir is the usage feed directory relative to the config file.
 const DefaultUsageFeedDir = "usage-feed"
 
+// LaneKeyNow is the clock lane keys are issued, listed, refused and pruned by.
+// Tests replace it so expiry never depends on the wall clock.
+var LaneKeyNow = time.Now
+
 // LaneKey is a short-lived client credential that carries lane, project and task
 // identity into the usage feed. It is accepted beside access.api-keys.
 type LaneKey struct {

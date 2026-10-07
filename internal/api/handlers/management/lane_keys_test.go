@@ -1,6 +1,7 @@
 package management
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -9,7 +10,9 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	configaccess "github.com/router-for-me/CLIProxyAPI/v8/internal/access/config_access"
 	"github.com/router-for-me/CLIProxyAPI/v8/internal/config"
+	sdkaccess "github.com/router-for-me/CLIProxyAPI/v8/sdk/access"
 	"github.com/router-for-me/CLIProxyAPI/v8/sdk/cliproxy/usage/feed"
 )
 
@@ -40,9 +43,9 @@ func laneKeyRequest(t *testing.T, h *Handler, method, target, body string, param
 
 func TestLaneKeysLifecycle(t *testing.T) {
 	now := time.Date(2026, 10, 7, 12, 0, 0, 0, time.UTC)
-	previous := laneKeyNow
-	laneKeyNow = func() time.Time { return now }
-	t.Cleanup(func() { laneKeyNow = previous })
+	previous := config.LaneKeyNow
+	config.LaneKeyNow = func() time.Time { return now }
+	t.Cleanup(func() { config.LaneKeyNow = previous })
 
 	path := writeTestConfigFile(t)
 	h := &Handler{cfg: &config.Config{}, configFilePath: path}
@@ -126,5 +129,42 @@ func TestCreateLaneKeyValidatesInput(t *testing.T) {
 	}
 	if len(h.cfg.LaneKeys) != 0 {
 		t.Fatalf("invalid requests must not add keys: %+v", h.cfg.LaneKeys)
+	}
+}
+
+func TestCreateLaneKeyReloadsBeforeResponding(t *testing.T) {
+	t.Cleanup(func() { configaccess.Register(nil) })
+	path := writeTestConfigFile(t)
+	h := &Handler{cfg: &config.Config{}, configFilePath: path}
+	gin.SetMode(gin.TestMode)
+	rec := httptest.NewRecorder()
+	reloadedBeforeResponse := false
+	h.SetConfigReloadHook(func(_ context.Context, cfg *config.Config) {
+		reloadedBeforeResponse = rec.Body.Len() == 0
+		configaccess.Register(&cfg.SDKConfig)
+	})
+	c, _ := gin.CreateTestContext(rec)
+	c.Request = httptest.NewRequest(http.MethodPost, "/v8/management/lane-keys", strings.NewReader(`{"lane":"lane-test","ttl_seconds":600}`))
+	c.Set(ConfigV8ContextKey, true)
+	h.CreateLaneKey(c)
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("status = %d body=%s", rec.Code, rec.Body.String())
+	}
+	if !reloadedBeforeResponse {
+		t.Fatal("the config reload must complete before the key is returned")
+	}
+	var created struct {
+		Key string `json:"key"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &created); err != nil {
+		t.Fatal(err)
+	}
+	req := httptest.NewRequest(http.MethodPost, "/v1/messages", nil)
+	req.Header.Set("Authorization", "Bearer "+created.Key)
+	manager := sdkaccess.NewManager()
+	manager.SetProviders(sdkaccess.RegisteredProviders())
+	result, authErr := manager.Authenticate(context.Background(), req)
+	if authErr != nil || result == nil || result.Metadata["lane"] != "lane-test" {
+		t.Fatalf("freshly issued key must authenticate immediately: result=%+v err=%v", result, authErr)
 	}
 }

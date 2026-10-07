@@ -1,6 +1,7 @@
 package management
 
 import (
+	"errors"
 	"net/http"
 	"strconv"
 	"strings"
@@ -107,4 +108,24 @@ func (h *Handler) GetUsageFeedCursors(c *gin.Context) {
 	}
 	c.Header("Cache-Control", "no-store")
 	c.JSON(http.StatusOK, gin.H{"cursors": cursors})
+}
+
+// DeleteUsageFeedCursor serves DELETE /usage/feed/cursors/:consumer so a
+// stalled consumer stops holding retention.
+func (h *Handler) DeleteUsageFeedCursor(c *gin.Context) {
+	store, ok := h.usageFeedStore(c)
+	if !ok {
+		return
+	}
+	consumer := strings.TrimSpace(c.Param("consumer"))
+	if err := store.DeleteCursor(consumer); err != nil {
+		if errors.Is(err, feed.ErrUnknownConsumer) {
+			c.JSON(http.StatusNotFound, gin.H{"code": "USAGE_FEED_UNKNOWN_CONSUMER"})
+			return
+		}
+		log.WithError(err).Error("usage feed: delete cursor")
+		c.JSON(http.StatusInternalServerError, gin.H{"code": "USAGE_FEED_WRITE_FAILED"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"status": "ok", "consumer": consumer})
 }

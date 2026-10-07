@@ -52,6 +52,7 @@ func (h *Handler) ConfigV8(c *gin.Context) {
 					deleteConfigV8Path(server, []string{"credential"})
 				}
 			}
+			redactV8LaneKeySecrets(root)
 			h.injectV8APIKeyAuthIndexesLocked(root, data)
 		}
 		value := configV8Node(root, parts)
@@ -140,6 +141,7 @@ func (h *Handler) ConfigV8(c *gin.Context) {
 	}
 	if !yamlRequest && c.Request.Method != http.MethodDelete {
 		preserveV8TURNSecrets(root, before)
+		preserveV8LaneKeySecrets(root, before)
 	}
 	// Revisions are owned by Home and must not become ordinary editable settings.
 	for _, field := range []string{"credentials/concurrency/lifecycle-config-revision", "credentials/concurrency/observation-barrier-revision", "plugins/auth-revision"} {
@@ -306,6 +308,48 @@ func mergeConfigV8Patch(dst, src *yaml.Node) {
 			mergeConfigV8Patch(old, value)
 		} else {
 			dst.Content = append(dst.Content, key, value)
+		}
+	}
+}
+
+var v8LaneKeysPath = []string{"access", "lane-keys"}
+
+// JSON reads never return a lane key's secret; id, lane, project, task and
+// expires-at stay so the key can be recognized and managed.
+func redactV8LaneKeySecrets(root *yaml.Node) {
+	keys := configV8Node(root, v8LaneKeysPath)
+	if keys == nil || keys.Kind != yaml.SequenceNode {
+		return
+	}
+	for _, key := range keys.Content {
+		deleteConfigV8Path(key, []string{"key"})
+	}
+}
+
+// A JSON write that omits a lane key's secret keeps the secret of the entry
+// with the same id, so writing the redacted view back cannot revoke keys.
+func preserveV8LaneKeySecrets(root, before *yaml.Node) {
+	next := configV8Node(root, v8LaneKeysPath)
+	previous := configV8Node(before, v8LaneKeysPath)
+	if next == nil || previous == nil || next.Kind != yaml.SequenceNode || previous.Kind != yaml.SequenceNode {
+		return
+	}
+	for _, key := range next.Content {
+		if configV8Node(key, []string{"key"}) != nil {
+			continue
+		}
+		id := configV8Node(key, []string{"id"})
+		if id == nil {
+			continue
+		}
+		for _, old := range previous.Content {
+			oldID := configV8Node(old, []string{"id"})
+			secret := configV8Node(old, []string{"key"})
+			if oldID == nil || secret == nil || oldID.Value != id.Value {
+				continue
+			}
+			key.Content = append(key.Content, &yaml.Node{Kind: yaml.ScalarNode, Tag: "!!str", Value: "key"}, cloneConfigV8Node(secret))
+			break
 		}
 	}
 }

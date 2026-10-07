@@ -19,8 +19,9 @@ type pickWindow struct {
 }
 
 // PostRoutingPick serves POST /routing/pick {model, lane}. It runs the manager's
-// selection path for the model without executing a request. Lane is echoed for
-// the caller's trace; selection itself is lane-agnostic.
+// read-only selection path (PeekAuth) for the model: nothing is executed and no
+// rotation, credit or session state moves. Lane is echoed for the caller's
+// trace; selection itself is lane-agnostic.
 func (h *Handler) PostRoutingPick(c *gin.Context) {
 	if h == nil || h.authManager == nil {
 		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "core auth manager unavailable"})
@@ -50,7 +51,7 @@ func (h *Handler) PostRoutingPick(c *gin.Context) {
 		lastErr  error
 	)
 	for _, candidate := range providers {
-		auth, err := h.authManager.SelectAuth(c.Request.Context(), candidate, body.Model, cliproxyexecutor.Options{})
+		auth, err := h.authManager.PeekAuth(c.Request.Context(), candidate, body.Model, cliproxyexecutor.Options{})
 		if err == nil && auth != nil {
 			selected, provider = auth, candidate
 			break

@@ -4,8 +4,8 @@ import (
 	"context"
 	"net/http"
 	"strings"
-	"time"
 
+	"github.com/router-for-me/CLIProxyAPI/v8/internal/config"
 	sdkaccess "github.com/router-for-me/CLIProxyAPI/v8/sdk/access"
 	sdkconfig "github.com/router-for-me/CLIProxyAPI/v8/sdk/config"
 )
@@ -33,7 +33,7 @@ func Register(cfg *sdkconfig.SDKConfig) {
 	} else {
 		sdkaccess.RegisterProvider(
 			sdkaccess.AccessProviderTypeConfigLaneKey,
-			newLaneKeyProvider(cfg.LaneKeys, time.Now),
+			newLaneKeyProvider(cfg.LaneKeys, config.LaneKeyNow),
 		)
 	}
 }

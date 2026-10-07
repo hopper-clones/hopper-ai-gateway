@@ -72,6 +72,9 @@ func TestSaveConfigPrunesExpiredLaneKeysAndKeepsV8Paths(t *testing.T) {
 		t.Fatal(err)
 	}
 	now := time.Date(2026, 10, 7, 12, 0, 0, 0, time.UTC)
+	previous := LaneKeyNow
+	LaneKeyNow = func() time.Time { return now }
+	t.Cleanup(func() { LaneKeyNow = previous })
 	if pruned := cfg.PruneExpiredLaneKeys(now); pruned != 1 || len(cfg.LaneKeys) != 1 {
 		t.Fatalf("pruned = %d lane keys = %+v", pruned, cfg.LaneKeys)
 	}

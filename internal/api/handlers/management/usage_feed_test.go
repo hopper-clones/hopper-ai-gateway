@@ -106,3 +106,41 @@ func TestUsageFeedReadAckAndCursors(t *testing.T) {
 		t.Fatalf("bad ack status = %d", rec.Code)
 	}
 }
+
+func TestDeleteUsageFeedCursorDropsConsumer(t *testing.T) {
+	at := time.Date(2026, 10, 7, 12, 0, 0, 0, time.UTC)
+	store, err := feed.Open(t.TempDir(), feed.WithClock(func() time.Time { return at }))
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = store.Close() })
+	store.Write(feed.NewUsageEvent("a", at))
+	store.Flush()
+	if err := store.Ack("stalled", feed.FormatCursor("2026-10-07T12Z.jsonl", 0)); err != nil {
+		t.Fatal(err)
+	}
+	h := &Handler{}
+	h.SetUsageFeed(store)
+	deleteCursor := func(consumer, peer string) *httptest.ResponseRecorder {
+		rec := httptest.NewRecorder()
+		c, _ := gin.CreateTestContext(rec)
+		c.Request = httptest.NewRequest(http.MethodDelete, "/v8/management/usage/feed/cursors/"+consumer, nil)
+		c.Request.RemoteAddr = peer
+		c.Params = gin.Params{{Key: "consumer", Value: consumer}}
+		h.DeleteUsageFeedCursor(c)
+		return rec
+	}
+	if rec := deleteCursor("stalled", "203.0.113.7:1"); rec.Code != http.StatusForbidden {
+		t.Fatalf("remote delete status = %d", rec.Code)
+	}
+	if rec := deleteCursor("nobody", "127.0.0.1:1"); rec.Code != http.StatusNotFound {
+		t.Fatalf("unknown consumer status = %d", rec.Code)
+	}
+	if rec := deleteCursor("stalled", "127.0.0.1:1"); rec.Code != http.StatusOK {
+		t.Fatalf("delete status = %d body=%s", rec.Code, rec.Body.String())
+	}
+	cursors, err := store.Cursors()
+	if err != nil || len(cursors) != 0 {
+		t.Fatalf("cursors after delete = %+v err=%v", cursors, err)
+	}
+}

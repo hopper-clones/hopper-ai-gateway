@@ -117,3 +117,41 @@ func TestRoutingPickRejectsBadInput(t *testing.T) {
 		t.Fatalf("no manager status = %d", rec.Code)
 	}
 }
+
+func TestRoutingPickIsReadOnlyForRoundRobin(t *testing.T) {
+	const model = "rr-pick-test-model"
+	manager := coreauth.NewManager(nil, &coreauth.RoundRobinSelector{}, nil)
+	manager.RegisterExecutor(&pickTestExecutor{provider: "claude"})
+	for _, id := range []string{"rr-pick-a", "rr-pick-b"} {
+		registry.GetGlobalRegistry().RegisterClient(id, "claude", []*registry.ModelInfo{{ID: model}})
+		t.Cleanup(func() { registry.GetGlobalRegistry().UnregisterClient(id) })
+		if _, err := manager.Register(context.Background(), &coreauth.Auth{ID: id, Provider: "claude", Status: coreauth.StatusActive}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	h := &Handler{authManager: manager}
+	var ids []string
+	for i := 0; i < 2; i++ {
+		rec := pickRequest(t, h, `{"model":"`+model+`"}`)
+		if rec.Code != http.StatusOK {
+			t.Fatalf("pick %d status = %d body=%s", i, rec.Code, rec.Body.String())
+		}
+		var picked struct {
+			AuthID string `json:"auth_id"`
+		}
+		if err := json.Unmarshal(rec.Body.Bytes(), &picked); err != nil {
+			t.Fatal(err)
+		}
+		ids = append(ids, picked.AuthID)
+	}
+	if ids[0] != ids[1] {
+		t.Fatalf("pick advanced the rotation: %v", ids)
+	}
+	served, err := manager.SelectAuth(context.Background(), "claude", model, cliproxyexecutor.Options{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if served.ID != ids[0] {
+		t.Fatalf("real traffic skipped %s after picks, served %s", ids[0], served.ID)
+	}
+}

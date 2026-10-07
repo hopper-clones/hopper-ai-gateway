@@ -17,9 +17,6 @@ const (
 	maxLaneKeyTTL     = 30 * 24 * time.Hour
 )
 
-// laneKeyNow is the clock for issuing and listing lane keys; tests replace it.
-var laneKeyNow = time.Now
-
 type laneKeyView struct {
 	ID        string `json:"id"`
 	KeyID     string `json:"key_id"`
@@ -64,7 +61,7 @@ func (h *Handler) CreateLaneKey(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to generate lane key"})
 		return
 	}
-	now := laneKeyNow()
+	now := config.LaneKeyNow()
 	key := config.LaneKey{
 		ID:        id,
 		Key:       secret,
@@ -82,16 +79,17 @@ func (h *Handler) CreateLaneKey(c *gin.Context) {
 	if !saved {
 		return
 	}
+	// The key must authenticate the moment the caller receives it.
+	h.reloadConfigAfterManagementSave(c.Request.Context(), snapshot)
 	c.JSON(http.StatusCreated, gin.H{
 		"id": key.ID, "key": key.Key, "expires_at": key.ExpiresAt,
 		"lane": key.Lane, "project": key.Project, "task": key.Task,
 	})
-	h.reloadConfigAfterManagementSaveAsync(c.Request.Context(), snapshot)
 }
 
 // ListLaneKeys serves GET /lane-keys. It never returns the keys themselves.
 func (h *Handler) ListLaneKeys(c *gin.Context) {
-	now := laneKeyNow()
+	now := config.LaneKeyNow()
 	h.mu.Lock()
 	views := make([]laneKeyView, 0, len(h.cfg.LaneKeys))
 	for _, key := range h.cfg.LaneKeys {
@@ -126,14 +124,15 @@ func (h *Handler) DeleteLaneKey(c *gin.Context) {
 		kept = nil
 	}
 	h.cfg.LaneKeys = kept
-	h.cfg.PruneExpiredLaneKeys(laneKeyNow())
+	h.cfg.PruneExpiredLaneKeys(config.LaneKeyNow())
 	snapshot, saved := h.saveConfigAndSnapshotLocked(c)
 	h.mu.Unlock()
 	if !saved {
 		return
 	}
+	// A revoked key must stop authenticating before the caller is told it is gone.
+	h.reloadConfigAfterManagementSave(c.Request.Context(), snapshot)
 	c.JSON(http.StatusOK, gin.H{"status": "ok", "id": id})
-	h.reloadConfigAfterManagementSaveAsync(c.Request.Context(), snapshot)
 }
 
 // newLaneKeyMaterial returns a short id and a 48-hex-character secret.
