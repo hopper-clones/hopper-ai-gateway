@@ -23,6 +23,10 @@ var capacityBridgeTimeout = 20 * time.Second
 // capacityFlight lets concurrent snapshot requests share one reader run.
 var capacityFlight singleflight.Group
 
+// capacityFlightJoined, when set, is called once a request has registered with
+// the shared run (tests use it to prove the overlap deterministically).
+var capacityFlightJoined func()
+
 type capacityRun struct {
 	status int
 	body   []byte
@@ -48,10 +52,15 @@ func (h *Handler) GetCapacitySnapshot(c *gin.Context) {
 			return
 		}
 	}
-	result, _, _ := capacityFlight.Do("snapshot", func() (any, error) {
+	// DoChan registers this request with the in-flight run synchronously.
+	results := capacityFlight.DoChan("snapshot", func() (any, error) {
 		return runCapacityReader(bun, script), nil
 	})
-	run, ok := result.(capacityRun)
+	if capacityFlightJoined != nil {
+		capacityFlightJoined()
+	}
+	result := <-results
+	run, ok := result.Val.(capacityRun)
 	if !ok {
 		c.JSON(http.StatusServiceUnavailable, gin.H{"code": "CAPACITY_OWNER_UNAVAILABLE"})
 		return
@@ -60,17 +69,28 @@ func (h *Handler) GetCapacitySnapshot(c *gin.Context) {
 	c.Data(run.status, "application/json", run.body)
 }
 
+// capacityExec runs the reader and returns its stdout and stderr. Tests replace
+// it to drive overlap and deadlines deterministically.
+var capacityExec = execCapacityReader
+
+func execCapacityReader(ctx context.Context, bun, script string) ([]byte, []byte, error) {
+	cmd := exec.CommandContext(ctx, bun, script)
+	cmd.Env = capacityEnv(os.Environ())
+	cmd.WaitDelay = time.Second
+	configureCapacityProcess(cmd)
+	var output, diagnostic bytes.Buffer
+	cmd.Stdout, cmd.Stderr = &output, &diagnostic
+	err := cmd.Run()
+	return output.Bytes(), diagnostic.Bytes(), err
+}
+
 // runCapacityReader executes the reader once with a scrubbed environment and a
 // deadline, and maps its outcome to the HTTP response shared by all waiters.
 func runCapacityReader(bun, script string) capacityRun {
 	ctx, cancel := context.WithTimeout(context.Background(), capacityBridgeTimeout)
 	defer cancel()
-	cmd := exec.CommandContext(ctx, bun, script)
-	cmd.Env = capacityEnv(os.Environ())
-	cmd.WaitDelay = time.Second
-	var output, diagnostic bytes.Buffer
-	cmd.Stdout, cmd.Stderr = &output, &diagnostic
-	if err := cmd.Run(); err != nil {
+	output, diagnostic, err := capacityExec(ctx, bun, script)
+	if err != nil {
 		if errors.Is(ctx.Err(), context.DeadlineExceeded) {
 			return capacityJSON(http.StatusGatewayTimeout, "CAPACITY_TIMEOUT")
 		}
@@ -78,7 +98,7 @@ func runCapacityReader(bun, script string) capacityRun {
 		var failure struct {
 			Code string `json:"code"`
 		}
-		if json.Unmarshal(diagnostic.Bytes(), &failure) == nil {
+		if json.Unmarshal(diagnostic, &failure) == nil {
 			switch failure.Code {
 			case "CAPACITY_UNCONFIGURED", "CAPACITY_INVALID_PACKAGE", "CAPACITY_INVALID_SESSION", "CAPACITY_INCOMPLETE_HISTORY":
 				code = failure.Code
@@ -90,10 +110,10 @@ func runCapacityReader(bun, script string) capacityRun {
 		SchemaVersion string            `json:"schemaVersion"`
 		Accounts      []json.RawMessage `json:"accounts"`
 	}
-	if json.Unmarshal(output.Bytes(), &result) != nil || result.SchemaVersion != "hopper.gateway-capacity.v1" || result.Accounts == nil {
+	if json.Unmarshal(output, &result) != nil || result.SchemaVersion != "hopper.gateway-capacity.v1" || result.Accounts == nil {
 		return capacityJSON(http.StatusBadGateway, "CAPACITY_INVALID_RESPONSE")
 	}
-	return capacityRun{status: http.StatusOK, body: output.Bytes()}
+	return capacityRun{status: http.StatusOK, body: output}
 }
 
 func capacityJSON(status int, code string) capacityRun {

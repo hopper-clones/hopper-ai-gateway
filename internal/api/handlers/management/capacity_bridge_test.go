@@ -1,10 +1,13 @@
 package management
 
 import (
+	"context"
 	"net/http/httptest"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -48,13 +51,19 @@ func TestCapacityEnvIsScrubbed(t *testing.T) {
 	}
 }
 
-func writeCapacityScript(t *testing.T, body string) string {
+func fakeCapacityExec(t *testing.T, run func(ctx context.Context) ([]byte, []byte, error)) {
 	t.Helper()
-	path := filepath.Join(t.TempDir(), "bun.sh")
-	if err := os.WriteFile(path, []byte("#!/bin/sh\n"+body), 0o700); err != nil {
-		t.Fatal(err)
-	}
-	return path
+	previous := capacityExec
+	capacityExec = func(ctx context.Context, _, _ string) ([]byte, []byte, error) { return run(ctx) }
+	t.Cleanup(func() { capacityExec = previous })
+}
+
+func configureCapacityEnv(t *testing.T) {
+	t.Helper()
+	t.Setenv("HOPPER_AI_CAPACITY_BUN", filepath.Join(t.TempDir(), "bun"))
+	t.Setenv("HOPPER_AI_CAPACITY_READER", filepath.Join(t.TempDir(), "reader.mjs"))
+	t.Setenv("HOPPER_AI_CAPACITY_STATE", "/state")
+	t.Setenv("HOPPER_AI_CAPACITY_PACKAGE", "/pkg")
 }
 
 func capacitySnapshot(t *testing.T) *httptest.ResponseRecorder {
@@ -69,43 +78,73 @@ func capacitySnapshot(t *testing.T) *httptest.ResponseRecorder {
 
 func TestCapacityBridgeSharesOneRunAcrossConcurrentRequests(t *testing.T) {
 	gin.SetMode(gin.TestMode)
-	counter := filepath.Join(t.TempDir(), "runs")
-	t.Setenv("HOPPER_AI_CAPACITY_BUN", writeCapacityScript(t, "echo run >> \"$HOPPER_AI_CAPACITY_COUNTER\"\nsleep 0.3\necho '{\"schemaVersion\":\"hopper.gateway-capacity.v1\",\"accounts\":[]}'\n"))
-	t.Setenv("HOPPER_AI_CAPACITY_READER", filepath.Join(t.TempDir(), "reader.mjs"))
-	t.Setenv("HOPPER_AI_CAPACITY_STATE", "/state")
-	t.Setenv("HOPPER_AI_CAPACITY_PACKAGE", "/pkg")
-	t.Setenv("HOPPER_AI_CAPACITY_COUNTER", counter)
-
+	configureCapacityEnv(t)
+	release := make(chan struct{})
+	var runs atomic.Int32
+	fakeCapacityExec(t, func(context.Context) ([]byte, []byte, error) {
+		runs.Add(1)
+		<-release
+		return []byte(`{"schemaVersion":"hopper.gateway-capacity.v1","accounts":[]}`), nil, nil
+	})
 	const requests = 4
+	joined := make(chan struct{}, requests)
+	capacityFlightJoined = func() { joined <- struct{}{} }
+	t.Cleanup(func() { capacityFlightJoined = nil })
+
 	results := make(chan int, requests)
 	for i := 0; i < requests; i++ {
 		go func() { results <- capacitySnapshot(t).Code }()
 	}
+	// Every request has registered with the single in-flight run before it may finish.
+	for i := 0; i < requests; i++ {
+		<-joined
+	}
+	close(release)
 	for i := 0; i < requests; i++ {
 		if code := <-results; code != 200 {
 			t.Fatalf("status = %d, want 200", code)
 		}
 	}
-	runs, err := os.ReadFile(counter)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if got := strings.Count(string(runs), "run"); got != 1 {
+	if got := runs.Load(); got != 1 {
 		t.Fatalf("reader ran %d times for %d concurrent requests, want 1", got, requests)
 	}
 }
 
 func TestCapacityBridgeTimesOut(t *testing.T) {
 	gin.SetMode(gin.TestMode)
+	configureCapacityEnv(t)
 	previous := capacityBridgeTimeout
-	capacityBridgeTimeout = 100 * time.Millisecond
+	capacityBridgeTimeout = time.Millisecond
 	t.Cleanup(func() { capacityBridgeTimeout = previous })
-	t.Setenv("HOPPER_AI_CAPACITY_BUN", writeCapacityScript(t, "exec sleep 5\n"))
-	t.Setenv("HOPPER_AI_CAPACITY_READER", filepath.Join(t.TempDir(), "reader.mjs"))
-	t.Setenv("HOPPER_AI_CAPACITY_STATE", "/state")
-	t.Setenv("HOPPER_AI_CAPACITY_PACKAGE", "/pkg")
+	fakeCapacityExec(t, func(ctx context.Context) ([]byte, []byte, error) {
+		<-ctx.Done() // a reader that never finishes on its own
+		return nil, nil, ctx.Err()
+	})
 	w := capacitySnapshot(t)
 	if w.Code != 504 || !strings.Contains(w.Body.String(), "CAPACITY_TIMEOUT") {
 		t.Fatalf("status=%d body=%s", w.Code, w.Body.String())
 	}
+}
+
+func TestCapacityBridgeRunsRealReader(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	configureCapacityEnv(t)
+	script := filepath.Join(t.TempDir(), "bun.sh")
+	if err := os.WriteFile(script, []byte("#!/bin/sh\necho '{\"schemaVersion\":\"hopper.gateway-capacity.v1\",\"accounts\":[]}'\n"), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("HOPPER_AI_CAPACITY_BUN", script)
+	w := capacitySnapshot(t)
+	if w.Code != 200 || !strings.Contains(w.Body.String(), "hopper.gateway-capacity.v1") {
+		t.Fatalf("status=%d body=%s", w.Code, w.Body.String())
+	}
+}
+
+func TestConfigureCapacityProcessIsolatesTheProcessGroup(t *testing.T) {
+	cmd := exec.Command("true")
+	configureCapacityProcess(cmd)
+	if cmd.Cancel == nil {
+		t.Fatal("Cancel must kill the whole process group on timeout")
+	}
+	assertCapacityProcessGroup(t, cmd)
 }
