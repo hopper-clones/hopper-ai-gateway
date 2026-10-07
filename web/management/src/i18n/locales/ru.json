@@ -1608,7 +1608,11 @@
     "ledger_not_routing": "Квота показана; наблюдение маршрутизации: {{status}}",
     "ledger_routing_unsupported": "не поддерживается",
     "ledger_routing_unavailable": "недоступно",
-    "ledger_routing_rejected": "отклонено"
+    "ledger_routing_rejected": "отклонено",
+    "meta_credentials_one": "{{count}} учётная запись",
+    "meta_credentials_few": "{{count}} учётные записи",
+    "meta_credentials_many": "{{count}} учётных записей",
+    "meta_credentials_other": "{{count}} учётной записи"
   },
   "plugin_management": {
     "title": "Управление плагинами",

@@ -1562,7 +1562,11 @@
     "ledger_not_routing": "Đã hiển thị hạn mức; quan sát định tuyến {{status}}",
     "ledger_routing_unsupported": "không hỗ trợ",
     "ledger_routing_unavailable": "không khả dụng",
-    "ledger_routing_rejected": "bị từ chối"
+    "ledger_routing_rejected": "bị từ chối",
+    "meta_credentials_one": "{{count}} credential",
+    "meta_credentials_few": "{{count}} credential",
+    "meta_credentials_many": "{{count}} credential",
+    "meta_credentials_other": "{{count}} credential"
   },
   "plugin_management": {
     "title": "Quản lý Plugin",

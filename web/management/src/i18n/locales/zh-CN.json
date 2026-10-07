@@ -1603,7 +1603,11 @@
     "ledger_not_routing": "额度已显示；路由观测{{status}}",
     "ledger_routing_unsupported": "不受支持",
     "ledger_routing_unavailable": "不可用",
-    "ledger_routing_rejected": "被拒绝"
+    "ledger_routing_rejected": "被拒绝",
+    "meta_credentials_one": "{{count}} 个凭证",
+    "meta_credentials_few": "{{count}} 个凭证",
+    "meta_credentials_many": "{{count}} 个凭证",
+    "meta_credentials_other": "{{count}} 个凭证"
   },
   "plugin_management": {
     "title": "插件管理",

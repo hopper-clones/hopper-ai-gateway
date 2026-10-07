@@ -40,6 +40,10 @@
   flex: 0 0 174px;
   width: 174px;
   max-width: 174px;
+  button[aria-haspopup='listbox'] {
+    height: 40px;
+    font-size: 18px;
+  }
 }
 
 @media (min-width: 1200px) {

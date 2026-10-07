@@ -1629,7 +1629,11 @@
     "ledger_not_routing": "額度已顯示；路由觀測{{status}}",
     "ledger_routing_unsupported": "不受支援",
     "ledger_routing_unavailable": "無法使用",
-    "ledger_routing_rejected": "遭拒絕"
+    "ledger_routing_rejected": "遭拒絕",
+    "meta_credentials_one": "{{count}} 個憑證",
+    "meta_credentials_few": "{{count}} 個憑證",
+    "meta_credentials_many": "{{count}} 個憑證",
+    "meta_credentials_other": "{{count}} 個憑證"
   },
   "plugin_management": {
     "title": "插件管理",

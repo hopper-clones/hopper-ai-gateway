@@ -242,7 +242,7 @@ export function QuotaLedger(props: Props) {
               <div className={styles.reset}>
                 <ResetTime instant={summary.resetAtMs} now={props.now} />
               </div>
-              {summary.measuredCount !== group.entries.length && (
+              {summary.measuredCount > 0 && summary.measuredCount !== group.entries.length && (
                 <small className={styles.coverage}>
                   {t('quota_management.ledger_measured', {
                     measured: summary.measuredCount,

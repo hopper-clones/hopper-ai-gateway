@@ -1605,7 +1605,11 @@
     "ledger_not_routing": "Quota shown; routing observation {{status}}",
     "ledger_routing_unsupported": "unsupported",
     "ledger_routing_unavailable": "unavailable",
-    "ledger_routing_rejected": "rejected"
+    "ledger_routing_rejected": "rejected",
+    "meta_credentials_one": "{{count}} credential",
+    "meta_credentials_few": "{{count}} credentials",
+    "meta_credentials_many": "{{count}} credentials",
+    "meta_credentials_other": "{{count}} credentials"
   },
   "plugin_management": {
     "title": "Plugin Management",
