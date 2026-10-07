@@ -47,7 +47,22 @@
     gap: 42px;
   }
   .workbench {
-    gap: 28px;
+    gap: 21px;
+  }
+  .tabsRow > :first-child {
+    button {
+      font-size: 18px;
+      gap: 10px;
+      padding-inline: 16px;
+      svg,
+      img {
+        width: 21px;
+        height: 21px;
+      }
+      > span:last-child {
+        font-size: 13px;
+      }
+    }
   }
 }
 
