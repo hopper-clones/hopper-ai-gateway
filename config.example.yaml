@@ -137,7 +137,11 @@ access:
 
 # Routing strategy for selecting credentials when multiple match.
 routing:
-  strategy: "round-robin" # round-robin (default), weighted-round-robin, fill-first
+  # reset-first prefers the soonest future reset observed in provider quota headers.
+  # Unknown or allowed snapshots older than five minutes fall back behind fresh resets.
+  # Exhausted windows remain unavailable until their reset; model weekly caps apply
+  # only to that model family. Enable session-affinity to keep warm sessions bound.
+  strategy: "round-robin" # round-robin (default), weighted-round-robin, fill-first, reset-first
   # weighted-round-robin uses each credential's integer weight (default 1, maximum 1,000,000).
   # Non-positive weights exclude the credential while this strategy is active.
   # For OAuth/file credentials, add a top-level numeric "weight" field to the auth JSON.

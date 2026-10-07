@@ -566,6 +566,9 @@ func (m *Manager) availableAuthsForRouteModelWithPriorityMode(auths []*Auth, pro
 	for _, candidate := range auths {
 		checkModel := m.selectionModelForAuth(candidate, routeModel)
 		blocked, reason, next := isAuthBlockedForModel(candidate, checkModel, now)
+		if !blocked && isResetFirstSelector(m.selector) {
+			blocked, reason, next = observedQuotaBlock(candidate, checkModel, now)
+		}
 		if !blocked {
 			priority := authPriority(candidate)
 			availableByPriority[priority] = append(availableByPriority[priority], candidate)
@@ -665,7 +668,7 @@ func selectionArgForSelector(selector Selector, routeModel string) string {
 func selectorContextForAvailableAuths(ctx context.Context, selector Selector, routeModel string) context.Context {
 	ctx = withWeightedSelectorStateModel(ctx, selector, routeModel)
 	if !isBuiltInSelector(selector) {
-		if _, sessionAffinity := selector.(*SessionAffinitySelector); !sessionAffinity {
+		if _, sessionAffinity := selector.(*SessionAffinitySelector); !sessionAffinity && !isResetFirstSelector(selector) {
 			return ctx
 		}
 	}
@@ -1790,7 +1793,7 @@ func (m *Manager) pickNextLegacy(ctx context.Context, provider, model string, op
 		return nil, nil, errPick
 	}
 	if !handled {
-		selectorCtx := selectorContextForAvailableAuths(ctx, selector, model)
+		selectorCtx := m.resetQuotaSelectorContext(selectorContextForAvailableAuths(ctx, selector, model), selectorAuths, model, selector)
 		selected, errPick = selector.Pick(selectorCtx, provider, selectionArgForSelector(selector, model), opts, selectorAuths)
 		if errPick != nil {
 			if isBuiltInSelector(selector) {
@@ -2124,7 +2127,7 @@ func (m *Manager) pickNextMixedLegacy(ctx context.Context, providers []string, m
 		return nil, nil, "", errPick
 	}
 	if !handled {
-		selectorCtx := selectorContextForAvailableAuths(ctx, selector, model)
+		selectorCtx := m.resetQuotaSelectorContext(selectorContextForAvailableAuths(ctx, selector, model), selectorAuths, model, selector)
 		selected, errPick = selector.Pick(selectorCtx, "mixed", selectionArgForSelector(selector, model), opts, selectorAuths)
 		if errPick != nil {
 			if isBuiltInSelector(selector) {
