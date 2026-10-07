@@ -5,6 +5,7 @@
 
 // API 客户端配置
 export interface ApiClientConfig {
+  localSession?: boolean;
   apiBase: string;
   managementKey: string;
   timeout?: number;

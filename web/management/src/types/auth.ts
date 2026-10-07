@@ -12,6 +12,7 @@ export interface LoginCredentials {
 
 // 认证状态
 export interface AuthState {
+  localSession: boolean;
   isAuthenticated: boolean;
   apiBase: string;
   managementKey: string;

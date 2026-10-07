@@ -9,6 +9,7 @@ import type { AuthState, LoginCredentials, ConnectionStatus } from '@/types';
 import { STORAGE_KEY_AUTH } from '@/utils/constants';
 import { obfuscatedStorage } from '@/services/storage/secureStorage';
 import { apiClient } from '@/services/api/client';
+import { isLocalSessionOrigin, takeLocalSessionCapability } from '@/services/api/localSession';
 import { LegacyBackendError, probeLegacyBackend } from '@/services/api/legacyBackendProbe';
 import { useConfigStore } from './useConfigStore';
 import { useModelsStore } from './useModelsStore';
@@ -34,6 +35,7 @@ export const useAuthStore = create<AuthStoreState>()(
     (set, get) => ({
       // 初始状态
       isAuthenticated: false,
+      localSession: false,
       apiBase: '',
       managementKey: '',
       rememberPassword: false,
@@ -47,6 +49,38 @@ export const useAuthStore = create<AuthStoreState>()(
         if (restoreSessionPromise) return restoreSessionPromise;
 
         restoreSessionPromise = (async () => {
+          const localBase = detectApiBaseFromLocation();
+          const capability = takeLocalSessionCapability();
+          if (isLocalSessionOrigin(localBase, window.location.origin)) {
+            apiClient.setConfig({ apiBase: localBase, managementKey: '', localSession: true });
+            try {
+              if (capability) {
+                await apiClient.post('/local-session', { capability });
+              }
+              const response = await apiClient.getRaw('/local-session', {
+                validateStatus: () => true,
+              });
+              if (response.status === 200) {
+                useConfigStore.getState().clearCache();
+                useModelsStore.getState().clearCache();
+                useQuotaStore.getState().clearQuotaCache();
+                await useConfigStore.getState().fetchConfig(true);
+                set({
+                  isAuthenticated: true,
+                  localSession: true,
+                  apiBase: localBase,
+                  managementKey: '',
+                  rememberPassword: false,
+                  connectionStatus: 'connected',
+                });
+                obfuscatedStorage.removeItem('managementKey');
+                localStorage.removeItem('isLoggedIn');
+                return true;
+              }
+            } catch {
+              /* Fall through to the manual connection form. */
+            }
+          }
           obfuscatedStorage.migratePlaintextKeys(['apiBase', 'apiUrl', 'managementKey']);
 
           const wasLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
@@ -132,6 +166,7 @@ export const useAuthStore = create<AuthStoreState>()(
           // 登录成功
           set({
             isAuthenticated: true,
+            localSession: false,
             apiBase,
             managementKey,
             rememberPassword,
@@ -150,6 +185,9 @@ export const useAuthStore = create<AuthStoreState>()(
 
       // 登出
       logout: () => {
+        if (get().localSession) {
+          void apiClient.revokeLocalSession().catch(() => {});
+        }
         restoreSessionPromise = null;
         apiClient.setConfig({ apiBase: '', managementKey: '' });
         useConfigStore.getState().clearCache();
@@ -157,6 +195,7 @@ export const useAuthStore = create<AuthStoreState>()(
         useQuotaStore.getState().clearQuotaCache();
         set({
           isAuthenticated: false,
+          localSession: false,
           apiBase: '',
           managementKey: '',
           serverVersion: null,
@@ -169,15 +208,15 @@ export const useAuthStore = create<AuthStoreState>()(
 
       // 检查认证状态
       checkAuth: async () => {
-        const { managementKey, apiBase } = get();
+        const { managementKey, apiBase, localSession } = get();
 
-        if (!managementKey || !apiBase) {
+        if ((!managementKey && !localSession) || !apiBase) {
           return false;
         }
 
         try {
           // 重新配置客户端
-          apiClient.setConfig({ apiBase, managementKey });
+          apiClient.setConfig({ apiBase, managementKey, localSession });
           set({ supportsPlugin: false });
 
           // 验证连接

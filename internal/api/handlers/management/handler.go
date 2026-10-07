@@ -38,6 +38,7 @@ const attemptMaxIdleTime = 2 * time.Hour
 
 // Handler aggregates config reference, persistence path and helpers.
 type Handler struct {
+	localBrowser            localBrowserSession
 	cfg                     *config.Config
 	configFilePath          string
 	mu                      sync.Mutex
@@ -127,6 +128,12 @@ func (h *Handler) SetConfig(cfg *config.Config) {
 		return
 	}
 	h.mu.Lock()
+	h.localBrowser.mu.Lock()
+	if h.localBrowser.policy != localSessionPolicy(cfg) {
+		h.localBrowser.capabilityExpires = time.Time{}
+		h.localBrowser.sessionExpires = time.Time{}
+	}
+	h.localBrowser.mu.Unlock()
 	h.cfg = cfg
 	h.mu.Unlock()
 }
@@ -261,7 +268,7 @@ func (h *Handler) SetPostAuthPersistHook(hook coreauth.PostAuthHook) {
 }
 
 // Middleware enforces access control for management endpoints.
-// All requests (local and remote) require a valid management key.
+// Requests require a management key or a launcher-authorized local browser session.
 // Additionally, remote access requires allow-remote-management=true.
 func (h *Handler) Middleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
@@ -285,6 +292,11 @@ func (h *Handler) Middleware() gin.HandlerFunc {
 		}
 		if provided == "" {
 			provided = c.GetHeader("X-Management-Key")
+		}
+
+		if provided == "" && h.acceptsLocalSession(c.Request) {
+			c.Next()
+			return
 		}
 
 		allowed, statusCode, errMsg := h.AuthenticateManagementKey(clientIP, localClient, provided)

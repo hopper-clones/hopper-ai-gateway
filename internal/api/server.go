@@ -95,7 +95,8 @@ type Server struct {
 	// envManagementSecret indicates whether MANAGEMENT_PASSWORD is configured.
 	envManagementSecret bool
 
-	localPassword string
+	localPassword      string
+	localConsoleOpener func(string) error
 
 	keepAliveEnabled   bool
 	keepAliveTimeout   time.Duration
@@ -224,6 +225,7 @@ func NewServer(cfg *config.Config, authManager *auth.Manager, accessManager *sdk
 		s.mgmt.SetPostAuthPersistHook(optionState.postAuthPersistHook)
 	}
 	s.localPassword = optionState.localPassword
+	s.localConsoleOpener = optionState.localConsoleOpener
 
 	// Home heartbeat gate: when home is enabled, block all endpoints with 503 until the
 	// subscribe-config heartbeat connection is healthy.
@@ -334,6 +336,24 @@ func (s *Server) Start() error {
 	s.muxHTTPListener = httpListener
 	s.listenerMu.Unlock()
 
+	if s.localConsoleOpener != nil && s.managementRoutesEnabled.Load() && cfg != nil && !cfg.Home.Enabled && !cfg.RemoteManagement.DisableControlPanel {
+		scheme := "http"
+		if useTLS {
+			scheme = "https"
+		}
+		consoleURL, errConsole := s.mgmt.CreateLocalConsoleURL(scheme + "://" + listener.Addr().String())
+		if errConsole != nil {
+			log.Warn("local console sign-in requires a loopback listener")
+		} else {
+			go func() {
+				if errOpen := s.localConsoleOpener(consoleURL); errOpen != nil {
+					s.mgmt.RevokeLocalConsoleSession()
+					log.Warn("could not open local console browser")
+				}
+			}()
+		}
+	}
+
 	httpErrCh := make(chan error, 1)
 	acceptErrCh := make(chan error, 1)
 
@@ -406,6 +426,9 @@ func (s *Server) Start() error {
 // Returns:
 //   - error: An error if the server fails to stop
 func (s *Server) Stop(ctx context.Context) error {
+	if s != nil && s.mgmt != nil {
+		s.mgmt.RevokeLocalConsoleSession()
+	}
 	log.Debug("Stopping API server...")
 
 	if s.keepAliveEnabled {

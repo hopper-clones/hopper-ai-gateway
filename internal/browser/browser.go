@@ -144,3 +144,11 @@ func GetPlatformInfo() map[string]interface{} {
 
 	return info
 }
+
+// OpenPrivateURL opens a sensitive launch URL without logging it or returning command details.
+func OpenPrivateURL(url string) error {
+	if err := open.Run(url); err != nil {
+		return fmt.Errorf("could not open private browser URL")
+	}
+	return nil
+}

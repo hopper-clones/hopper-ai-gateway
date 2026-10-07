@@ -25,6 +25,43 @@ describe('v8 management transport', () => {
     await apiClient.put('/config/observability/logs/debug', false, { adapter });
   });
 
+  test('uses local cookie mode without bearer and omits it after switching to remote', async () => {
+    Object.defineProperty(globalThis, 'window', {
+      configurable: true,
+      value: { location: { origin: 'http://127.0.0.1:8317' }, dispatchEvent: () => true },
+    });
+    apiClient.setConfig({
+      apiBase: 'http://127.0.0.1:8317',
+      managementKey: 'must-not-send',
+      localSession: true,
+    });
+    await apiClient.get('/config', {
+      adapter: async (config) => {
+        expect(config.headers.Authorization).toBeUndefined();
+        expect(config.headers['X-Hopper-Local-Session']).toBe('1');
+        expect(config.withCredentials).toBe(false);
+        return { data: {}, status: 200, statusText: 'OK', headers: {}, config };
+      },
+    });
+    apiClient.setConfig({ apiBase: 'https://remote.invalid', managementKey: 'remote-fixture' });
+    await apiClient.get('/config', {
+      headers: { 'X-Hopper-Local-Session': '1' },
+      adapter: async (config) => {
+        expect(config.headers.Authorization).toBe('Bearer remote-fixture');
+        expect(config.headers['X-Hopper-Local-Session']).toBeUndefined();
+        expect(config.withCredentials).toBe(false);
+        return { data: {}, status: 200, statusText: 'OK', headers: {}, config };
+      },
+    });
+    expect(() =>
+      apiClient.setConfig({
+        apiBase: 'http://127.0.0.1:9999',
+        managementKey: '',
+        localSession: true,
+      })
+    ).toThrow();
+  });
+
   test('retains backend version and plugin support events', async () => {
     const events: Event[] = [];
     Object.defineProperty(globalThis, 'window', {

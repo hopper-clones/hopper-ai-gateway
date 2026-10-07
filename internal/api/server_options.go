@@ -14,6 +14,7 @@ import (
 )
 
 type serverOptionConfig struct {
+	localConsoleOpener    func(string) error
 	extraMiddleware       []gin.HandlerFunc
 	engineConfigurator    func(*gin.Engine)
 	routerConfigurator    func(*gin.Engine, *handlers.BaseAPIHandler, *config.Config)
@@ -133,4 +134,9 @@ func WithExampleAPIKeySafeMode() ServerOption {
 	return func(cfg *serverOptionConfig) {
 		cfg.exampleAPIKeySafeMode = true
 	}
+}
+
+// WithLocalConsoleOpener enables native loopback console sign-in. The callback must not log its sensitive URL.
+func WithLocalConsoleOpener(open func(string) error) ServerOption {
+	return func(cfg *serverOptionConfig) { cfg.localConsoleOpener = open }
 }

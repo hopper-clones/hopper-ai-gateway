@@ -15,12 +15,14 @@ import {
 } from '@/utils/constants';
 import { computeApiUrl } from '@/utils/connection';
 import { parseApiErrorResponse } from './apiError';
+import { isLocalSessionOrigin } from './localSession';
 
 class ApiClient {
   private instance: AxiosInstance;
   private apiBase: string = '';
   private managementKey: string = '';
   private connectionRevision = 0;
+  private localSession = false;
 
   constructor() {
     this.instance = axios.create({
@@ -38,17 +40,37 @@ class ApiClient {
    */
   setConfig(config: ApiClientConfig): void {
     const apiBase = computeApiUrl(config.apiBase);
-    if (apiBase !== this.apiBase || config.managementKey !== this.managementKey) {
+    const localSession =
+      config.localSession === true &&
+      typeof window !== 'undefined' &&
+      isLocalSessionOrigin(config.apiBase, window.location.origin);
+    if (config.localSession && !localSession)
+      throw new Error('Local sessions require the same loopback origin');
+    if (
+      apiBase !== this.apiBase ||
+      config.managementKey !== this.managementKey ||
+      localSession !== this.localSession
+    ) {
       this.connectionRevision += 1;
     }
     this.apiBase = apiBase;
-    this.managementKey = config.managementKey;
+    this.managementKey = localSession ? '' : config.managementKey;
+    this.localSession = localSession;
 
     if (config.timeout) {
       this.instance.defaults.timeout = config.timeout;
     } else {
       this.instance.defaults.timeout = REQUEST_TIMEOUT_MS;
     }
+  }
+
+  /** Start revocation with captured connection state before logout clears the client. */
+  revokeLocalSession(): Promise<Response> {
+    return fetch(`${this.apiBase}/local-session`, {
+      method: 'DELETE',
+      credentials: 'same-origin',
+      headers: { 'X-Hopper-Local-Session': '1' },
+    });
   }
 
   /** Guards read/modify/write operations across connection changes, including ABA switches. */
@@ -116,6 +138,14 @@ class ApiClient {
       (config) => {
         // 设置 baseURL
         config.baseURL = this.apiBase;
+
+        config.withCredentials = false;
+        if (this.localSession) {
+          config.headers['X-Hopper-Local-Session'] = '1';
+          delete config.headers.Authorization;
+        } else {
+          delete config.headers['X-Hopper-Local-Session'];
+        }
 
         // 添加认证头
         if (this.managementKey) {
