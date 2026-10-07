@@ -29,6 +29,7 @@ go build -o test-output ./cmd/server && rm test-output # Verify compile (REQUIRE
 - `make build` packages the console and builds the gateway; `make verify` runs frontend and Go checks.
 - Serve only the bundled `/management.html` console; do not add a second gateway app or fetch an upstream replacement.
 - Preserve source provenance in `docs/THEO-REFACTOR.md`; test replay is synthetic and never production credential data.
+- The usage feed (`sdk/cliproxy/usage/feed`, `docs/USAGE-FEED.md`) and lane keys (`access.lane-keys`) are the gateway's accounting contract; the Capacity bridge child process has a 20 s deadline and a scrubbed environment.
 
 ## Architecture
 - `cmd/server/` — Server entrypoint

@@ -92,6 +92,12 @@ retain the corresponding business operation's fields.
 | `/requests/api-call` | POST | Make an authenticated upstream call. |
 | `/routing/cooldown/reset` | POST | Clear credential cooldown. |
 | `/routing/model-definitions/<channel>` | GET | Get model definitions. |
+| `/routing/pick` | POST | Select the credential for a model without executing (see `USAGE-FEED.md`). |
+| `/lane-keys` | GET, POST | List or issue expiring lane keys; the key is returned once. |
+| `/lane-keys/<id>` | DELETE | Revoke a lane key. |
+| `/usage/feed` | GET | Read the usage feed from a cursor (loopback only). |
+| `/usage/feed/ack` | POST | Persist a consumer's acked cursor. |
+| `/usage/feed/cursors` | GET | List acked cursors. |
 | `/observability/logs` | GET, DELETE | Read or clear application logs. |
 | `/observability/logs/errors` | GET | List error-log files. |
 | `/observability/logs/errors/<name>` | GET | Download an error-log file. |
