@@ -264,3 +264,26 @@
     }
   }
 }
+.sources {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  button {
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 8px 12px;
+    background: transparent;
+    color: var(--text-secondary);
+    font: inherit;
+    font-size: 13px;
+    cursor: pointer;
+    &[aria-pressed='true'] {
+      background: var(--bg-tertiary);
+      color: var(--text-primary);
+    }
+    &:focus-visible {
+      outline: 2px solid var(--primary-color);
+      outline-offset: 2px;
+    }
+  }
+}

@@ -7,6 +7,7 @@ export type QuotaHeaderProps = {
   totalCount: number;
   loadedCount: number;
   attentionCount: number;
+  accountSource?: boolean;
   refreshing: boolean;
   disableControls: boolean;
   onRefreshAll: () => void;
@@ -36,13 +37,17 @@ export function QuotaHeader(props: QuotaHeaderProps) {
         </h1>
         <p className={styles.meta} data-reveal>
           <span className={styles.metaTotal}>
-            {t('quota_management.meta_credentials', { count: totalCount })}
+            {t(props.accountSource ? 'capacity.accounts' : 'quota_management.meta_credentials', {
+              count: totalCount,
+            })}
           </span>
           <span className={styles.metaDot} aria-hidden="true">
             ·
           </span>
           <span className={loadedCount > 0 ? styles.metaLoaded : styles.metaMuted}>
-            {t('quota_management.meta_loaded', { count: displayLoadedCount })}
+            {t(props.accountSource ? 'capacity.fresh_accounts' : 'quota_management.meta_loaded', {
+              count: displayLoadedCount,
+            })}
           </span>
           {attentionCount > 0 && (
             <>
@@ -57,14 +62,16 @@ export function QuotaHeader(props: QuotaHeaderProps) {
         </p>
       </div>
       <div className={styles.actions} data-reveal>
-        <button
-          type="button"
-          className={styles.emailAction}
-          onClick={onToggleEmails}
-          aria-pressed={showEmails}
-        >
-          {t(`quota_management.ledger_${showEmails ? 'hide_emails' : 'show_emails'}`)}
-        </button>
+        {!props.accountSource && (
+          <button
+            type="button"
+            className={styles.emailAction}
+            onClick={onToggleEmails}
+            aria-pressed={showEmails}
+          >
+            {t(`quota_management.ledger_${showEmails ? 'hide_emails' : 'show_emails'}`)}
+          </button>
+        )}
         <button
           type="button"
           className={styles.primaryAction}

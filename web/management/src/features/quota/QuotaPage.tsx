@@ -17,6 +17,8 @@ import { getQuotaCacheKey } from '@/utils/quota/identity';
 import { ProviderTabs } from '@/features/authFiles/components/ProviderTabs';
 import { QuotaHeader } from './components/QuotaHeader';
 import { QuotaLedger } from './components/QuotaLedger';
+import { CapacityLedger } from './components/CapacityLedger';
+import { capacityApi, type CapacitySnapshot } from '@/services/api/capacity';
 import { maskQuotaIdentity, passiveLedgerQuota } from './quotaLedgerModel';
 import { QuotaTimeline } from './components/QuotaTimeline';
 import {
@@ -58,6 +60,11 @@ export function QuotaPage() {
   const [files, setFiles] = useState<AuthFileItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [capacity, setCapacity] = useState<CapacitySnapshot | null>(null);
+  const [capacityError, setCapacityError] = useState('');
+  const [capacityLoading, setCapacityLoading] = useState(false);
+  const [source, setSource] = useState<'auto' | 'gateway' | 'capacity'>('auto');
+  const capacityRequestRef = useRef(0);
   const [tab, setTab] = useState<QuotaTabId>(() => readQuotaUiState()?.tab ?? 'all');
   const [sortMode, setSortMode] = useState<QuotaSortMode>(
     () => readQuotaUiState()?.sortMode ?? 'default'
@@ -72,6 +79,31 @@ export function QuotaPage() {
 
   const sessionGeneration = useQuotaStore((state) => state.cacheGeneration);
   const [filesGeneration, setFilesGeneration] = useState<number | null>(null);
+  const loadCapacity = useCallback(async () => {
+    const requestId = ++capacityRequestRef.current;
+    const isCurrent = () =>
+      requestId === capacityRequestRef.current &&
+      sessionGeneration === useQuotaStore.getState().cacheGeneration;
+    if (connectionStatus !== 'connected') {
+      setCapacity(null);
+      setCapacityError('');
+      setCapacityLoading(false);
+      return;
+    }
+    setCapacityLoading(true);
+    setCapacityError('');
+    try {
+      const next = await capacityApi.snapshot();
+      if (isCurrent()) setCapacity(next);
+    } catch {
+      if (isCurrent()) {
+        setCapacity(null);
+        setCapacityError(t('capacity.owner_unavailable'));
+      }
+    } finally {
+      if (isCurrent()) setCapacityLoading(false);
+    }
+  }, [connectionStatus, sessionGeneration, t]);
   const listRequestRef = useRef(0);
   const loadFiles = useCallback(async () => {
     const requestId = ++listRequestRef.current;
@@ -100,7 +132,11 @@ export function QuotaPage() {
     }
   }, [connectionStatus, sessionGeneration, t]);
 
-  useHeaderRefresh(loadFiles);
+  useHeaderRefresh(
+    useCallback(async () => {
+      await Promise.all([loadFiles(), loadCapacity()]);
+    }, [loadFiles, loadCapacity])
+  );
 
   useEffect(() => {
     void loadFiles();
@@ -108,6 +144,13 @@ export function QuotaPage() {
       listRequestRef.current += 1;
     };
   }, [loadFiles]);
+  useEffect(() => {
+    setCapacity(null);
+    void loadCapacity();
+    return () => {
+      capacityRequestRef.current += 1;
+    };
+  }, [loadCapacity]);
 
   const antigravityQuota = useQuotaStore((state) => state.antigravityQuota);
   const claudeQuota = useQuotaStore((state) => state.claudeQuota);
@@ -268,146 +311,176 @@ export function QuotaPage() {
   const canUseActions = !disableControls && !loading && filesGeneration === sessionGeneration;
 
   const isEmpty = !loading && filteredEntries.length === 0;
+  const showCapacity =
+    source === 'capacity' || (source === 'auto' && entries.length === 0 && capacity !== null);
+  const freshCapacityCount =
+    capacity?.accounts.filter((account) => account.freshness === 'fresh').length ?? 0;
 
   return (
     <div className={styles.page} ref={revealRef}>
       <QuotaHeader
-        totalCount={entries.length}
-        loadedCount={loadedCount}
-        attentionCount={attentionCount}
-        refreshing={loading || batchLoading}
+        totalCount={showCapacity ? (capacity?.accounts.length ?? 0) : entries.length}
+        loadedCount={showCapacity ? freshCapacityCount : loadedCount}
+        attentionCount={
+          showCapacity ? (capacity?.accounts.length ?? 0) - freshCapacityCount : attentionCount
+        }
+        accountSource={showCapacity}
+        refreshing={loading || batchLoading || capacityLoading}
         disableControls={disableControls}
-        onRefreshAll={handleRefreshAll}
+        onRefreshAll={() => {
+          void loadCapacity();
+          if (!showCapacity) handleRefreshAll();
+        }}
         showEmails={showEmails}
         onToggleEmails={() => setShowEmails(!showEmails)}
       />
 
-      <section className={styles.workbench}>
-        {}
-        <div className={styles.tabsRow} data-reveal>
-          <ProviderTabs
-            types={visibleTabIds}
-            counts={tabCounts}
-            active={tab}
-            resolvedTheme={resolvedTheme}
-            onChange={handleTabChange}
-          />
-          <Select
-            className={styles.viewSelector}
-            fullWidth={false}
-            value={view}
-            options={[
-              { value: 'ledger', label: t('quota_management.ledger_view') },
-              { value: 'timeline', label: t('quota_management.ledger_timeline') },
-            ]}
-            onChange={setView}
-            ariaLabel={t('quota_management.ledger_view_label')}
-            size="sm"
-          />
-        </div>
-
-        {error && (
-          <div className={styles.errorBanner} role="alert">
-            {error}
-          </div>
-        )}
-
-        {loading ? (
-          <div className={styles.grid} aria-hidden="true">
-            {Array.from({ length: SKELETON_CARD_COUNT }, (_, index) => (
-              <Skeleton key={index} height={168} rounded={14} />
-            ))}
-          </div>
-        ) : isEmpty ? (
-          <EmptyState
-            title={
-              search.trim()
-                ? t('quota_management.search_empty_title')
-                : tab === 'all'
-                  ? t('quota_management.empty_title')
-                  : t(`${QUOTA_ADAPTERS[tab].i18nPrefix}.empty_title`)
-            }
-            description={
-              search.trim()
-                ? t('quota_management.search_empty_desc')
-                : tab === 'all'
-                  ? t('quota_management.empty_desc')
-                  : t(`${QUOTA_ADAPTERS[tab].i18nPrefix}.empty_desc`)
-            }
-            action={
-              search.trim() ? (
-                <Button variant="secondary" size="sm" onClick={() => handleSearchChange('')}>
-                  {t('quota_management.search_clear')}
-                </Button>
-              ) : tab === 'all' ? undefined : (
-                <Button variant="secondary" size="sm" onClick={() => handleTabChange('all')}>
-                  {t('auth_files.filter_all')}
-                </Button>
-              )
-            }
-          />
-        ) : view === 'ledger' ? (
-          <QuotaLedger
-            entries={pageItems}
-            quotaFor={getQuota}
-            resolvedTheme={resolvedTheme}
-            showEmails={showEmails}
-            canRefresh={canUseActions}
-            resettingQuotaName={resettingQuotaName}
-            onRefresh={(entry) => void refreshQuota(entry.file, QUOTA_ADAPTERS[entry.type])}
-            onReset={(entry) => resetQuota(entry.file, QUOTA_ADAPTERS[entry.type])}
-            now={tick}
-          />
+      <nav className={styles.sources} aria-label={t('capacity.source_label')}>
+        <button type="button" aria-pressed={showCapacity} onClick={() => setSource('capacity')}>
+          {t('capacity.source_capacity')} {capacity ? `· ${capacity.accounts.length}` : ''}
+        </button>
+        <button type="button" aria-pressed={!showCapacity} onClick={() => setSource('gateway')}>
+          {t('capacity.source_gateway')} · {entries.length}
+        </button>
+      </nav>
+      {showCapacity ? (
+        capacityLoading && !capacity ? (
+          <Skeleton width="100%" height={200} />
+        ) : capacity ? (
+          <CapacityLedger snapshot={capacity} now={tick} />
         ) : (
-          <QuotaTimeline
-            entries={pageItems}
-            quotaFor={getQuota}
-            displayNameFor={displayNameFor}
-            resolvedTheme={resolvedTheme}
-          />
-        )}
-
-        <details className={styles.filters}>
-          <summary>{t('quota_management.ledger_filters')}</summary>
-          <div className={styles.toolbar}>
-            <div className={styles.search}>
-              <IconSearch size={16} className={styles.searchIcon} aria-hidden="true" />
-              <input
-                ref={searchInputRef}
-                className={styles.searchInput}
-                type="search"
-                value={search}
-                onChange={(event) => handleSearchChange(event.target.value)}
-                placeholder={t('quota_management.search_placeholder')}
-                aria-label={t('quota_management.search_label')}
-              />
-              {search && (
-                <button
-                  type="button"
-                  className={styles.clearSearch}
-                  aria-label={t('quota_management.search_clear')}
-                  title={t('quota_management.search_clear')}
-                  onClick={() => {
-                    handleSearchChange('');
-                    searchInputRef.current?.focus();
-                  }}
-                >
-                  <IconX size={14} aria-hidden="true" />
-                </button>
-              )}
-            </div>
-            <div className={styles.sort}>
-              <Select
-                value={sortMode}
-                options={sortOptions}
-                onChange={handleSortModeChange}
-                ariaLabel={t('quota_management.sort_label')}
-                size="sm"
-              />
-            </div>
+          <div className={styles.errorBanner} role="status">
+            {capacityError || t('capacity.owner_unavailable')}
           </div>
-        </details>
-      </section>
+        )
+      ) : (
+        <section className={styles.workbench}>
+          {}
+          <div className={styles.tabsRow} data-reveal>
+            <ProviderTabs
+              types={visibleTabIds}
+              counts={tabCounts}
+              active={tab}
+              resolvedTheme={resolvedTheme}
+              onChange={handleTabChange}
+            />
+            <Select
+              className={styles.viewSelector}
+              fullWidth={false}
+              value={view}
+              options={[
+                { value: 'ledger', label: t('quota_management.ledger_view') },
+                { value: 'timeline', label: t('quota_management.ledger_timeline') },
+              ]}
+              onChange={setView}
+              ariaLabel={t('quota_management.ledger_view_label')}
+              size="sm"
+            />
+          </div>
+
+          {error && (
+            <div className={styles.errorBanner} role="alert">
+              {error}
+            </div>
+          )}
+
+          {loading ? (
+            <div className={styles.grid} aria-hidden="true">
+              {Array.from({ length: SKELETON_CARD_COUNT }, (_, index) => (
+                <Skeleton key={index} height={168} rounded={14} />
+              ))}
+            </div>
+          ) : isEmpty ? (
+            <EmptyState
+              title={
+                search.trim()
+                  ? t('quota_management.search_empty_title')
+                  : tab === 'all'
+                    ? t('quota_management.empty_title')
+                    : t(`${QUOTA_ADAPTERS[tab].i18nPrefix}.empty_title`)
+              }
+              description={
+                search.trim()
+                  ? t('quota_management.search_empty_desc')
+                  : tab === 'all'
+                    ? t('quota_management.empty_desc')
+                    : t(`${QUOTA_ADAPTERS[tab].i18nPrefix}.empty_desc`)
+              }
+              action={
+                search.trim() ? (
+                  <Button variant="secondary" size="sm" onClick={() => handleSearchChange('')}>
+                    {t('quota_management.search_clear')}
+                  </Button>
+                ) : tab === 'all' ? undefined : (
+                  <Button variant="secondary" size="sm" onClick={() => handleTabChange('all')}>
+                    {t('auth_files.filter_all')}
+                  </Button>
+                )
+              }
+            />
+          ) : view === 'ledger' ? (
+            <QuotaLedger
+              entries={pageItems}
+              quotaFor={getQuota}
+              resolvedTheme={resolvedTheme}
+              showEmails={showEmails}
+              canRefresh={canUseActions}
+              resettingQuotaName={resettingQuotaName}
+              onRefresh={(entry) => void refreshQuota(entry.file, QUOTA_ADAPTERS[entry.type])}
+              onReset={(entry) => resetQuota(entry.file, QUOTA_ADAPTERS[entry.type])}
+              now={tick}
+            />
+          ) : (
+            <QuotaTimeline
+              entries={pageItems}
+              quotaFor={getQuota}
+              displayNameFor={displayNameFor}
+              resolvedTheme={resolvedTheme}
+            />
+          )}
+
+          <details className={styles.filters}>
+            <summary>{t('quota_management.ledger_filters')}</summary>
+            <div className={styles.toolbar}>
+              <div className={styles.search}>
+                <IconSearch size={16} className={styles.searchIcon} aria-hidden="true" />
+                <input
+                  ref={searchInputRef}
+                  className={styles.searchInput}
+                  type="search"
+                  value={search}
+                  onChange={(event) => handleSearchChange(event.target.value)}
+                  placeholder={t('quota_management.search_placeholder')}
+                  aria-label={t('quota_management.search_label')}
+                />
+                {search && (
+                  <button
+                    type="button"
+                    className={styles.clearSearch}
+                    aria-label={t('quota_management.search_clear')}
+                    title={t('quota_management.search_clear')}
+                    onClick={() => {
+                      handleSearchChange('');
+                      searchInputRef.current?.focus();
+                    }}
+                  >
+                    <IconX size={14} aria-hidden="true" />
+                  </button>
+                )}
+              </div>
+              <div className={styles.sort}>
+                <Select
+                  value={sortMode}
+                  options={sortOptions}
+                  onChange={handleSortModeChange}
+                  ariaLabel={t('quota_management.sort_label')}
+                  size="sm"
+                />
+              </div>
+            </div>
+          </details>
+        </section>
+      )}
     </div>
   );
 }

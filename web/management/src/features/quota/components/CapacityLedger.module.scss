@@ -1,0 +1,103 @@
+.ledger {
+  min-width: 0;
+}
+.source {
+  margin: 0 0 14px;
+  color: var(--text-tertiary);
+  font-size: 12px;
+}
+.tokens {
+  padding: 16px 0;
+  border-block: 1px solid var(--border-color);
+}
+.tokens summary,
+.credits summary,
+.accountTokens summary {
+  cursor: pointer;
+}
+.tokens > summary {
+  font-size: 16px;
+}
+.tokens p,
+.credits p,
+.accountTokens p {
+  color: var(--text-tertiary);
+  font-size: 12px;
+  line-height: 1.5;
+}
+.totals {
+  display: flex;
+  gap: 24px;
+  flex-wrap: wrap;
+  font-size: 12px;
+}
+.totals dt {
+  color: var(--text-tertiary);
+}
+.totals dd {
+  margin: 4px 0 0;
+  font-variant-numeric: tabular-nums;
+}
+.tokenRows {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 10px 24px;
+}
+.tokenRows > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 13px;
+}
+.accountTokens {
+  margin-top: 18px;
+  font-size: 13px;
+}
+.accountTokenRow {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 6px 0;
+}
+.providers {
+  display: flex;
+  overflow-x: auto;
+  gap: 5px;
+  margin-top: 18px;
+}
+.providers button {
+  flex-shrink: 0;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-secondary);
+  padding: 9px 12px;
+  font: inherit;
+  cursor: pointer;
+}
+.providers button[aria-pressed='true'] {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+}
+.providers small {
+  margin-left: 6px;
+  color: var(--text-tertiary);
+}
+.providers button:focus-visible {
+  outline: 2px solid var(--primary-color);
+  outline-offset: -2px;
+}
+.credits {
+  grid-column: 1 / -1;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+@media (max-width: 560px) {
+  .accountTokenRow {
+    flex-direction: column;
+    gap: 3px;
+  }
+  .totals {
+    gap: 14px;
+  }
+}
