@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/router-for-me/CLIProxyAPI/v8/internal/runtime/executor/helps"
 	"github.com/router-for-me/CLIProxyAPI/v8/sdk/cliproxy/usage"
 )
 
@@ -65,9 +66,13 @@ func TestPluginEmitsUsageAndQuotaEvents(t *testing.T) {
 	headers.Set("anthropic-ratelimit-unified-7d-utilization", "1")
 	headers.Set("anthropic-ratelimit-unified-7d-status", "rejected")
 
-	ctx := laneContext(t, map[string]string{"source": "authorization", "lane": "lane-test", "project": "project:822b", "task": "task:a929eb4f"})
+	// The gin context is recycled by dispatch time; identity comes from the record.
+	ctx := laneContext(t, map[string]string{"source": "authorization", "lane": "someone-else"})
 	plugin.HandleUsage(ctx, usage.Record{
 		RequestID:       "req-1",
+		Lane:            "lane-test",
+		Project:         "project:822b",
+		Task:            "task:a929eb4f",
 		Provider:        "claude",
 		Model:           "claude-fable-5-1",
 		APIKey:          "lane-secret",
@@ -75,7 +80,7 @@ func TestPluginEmitsUsageAndQuotaEvents(t *testing.T) {
 		ReasoningEffort: "high",
 		RequestedAt:     at.Add(-1500 * time.Millisecond),
 		Latency:         1500 * time.Millisecond,
-		Detail:          usage.Detail{InputTokens: 100, CachedTokens: 40, CacheCreationTokens: 5, OutputTokens: 20, ReasoningTokens: 8, TotalTokens: 120},
+		Detail:          helps.ParseClaudeUsage([]byte(`{"usage":{"input_tokens":100,"cache_read_input_tokens":40,"cache_creation_input_tokens":5,"output_tokens":20,"output_tokens_details":{"thinking_tokens":8}}}`)),
 		ResponseHeaders: headers,
 	})
 	// A plain api-key request with no tokens and a failure.
@@ -111,7 +116,7 @@ func TestPluginEmitsUsageAndQuotaEvents(t *testing.T) {
 	if first.Provider != "claude" || first.Model != "claude-fable-5-1" || first.Effort != "high" || first.Status != "ok" || first.LatencyMS != 1500 {
 		t.Fatalf("usage request fields = %+v", first)
 	}
-	if first.Tokens != (Tokens{Input: 100, CachedInput: 40, CacheWrite: 5, Output: 20, Reasoning: 8, Total: 120}) {
+	if first.Tokens != (Tokens{Input: 145, CachedInput: 40, CacheWrite: 5, Output: 20, Reasoning: 8, Total: 165}) {
 		t.Fatalf("usage tokens = %+v", first.Tokens)
 	}
 	if first.CacheHit == nil || !*first.CacheHit {

@@ -110,6 +110,8 @@ func Read(dir, cursor string, limit int) (Page, error) {
 			page.HasMore = moreAfter(dir, files, index, next)
 			return page, nil
 		}
+		// The newest file may still end in a line the writer is completing:
+		// wait there. An older file's torn tail will never complete, so move on.
 		if index+1 >= len(files) {
 			return page, nil
 		}

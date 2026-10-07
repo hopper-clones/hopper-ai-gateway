@@ -119,3 +119,28 @@ func TestReadEmptyDirectory(t *testing.T) {
 		t.Fatalf("empty page = %+v", page)
 	}
 }
+
+func TestReadNeverAdvancesPastPartialLineOfNewestFile(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "2026-10-07T12Z.jsonl"), []byte("{\"id\":\"a\"}\n{\"id\":\"b"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	page, err := Read(dir, "", 10)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if ids := eventIDs(t, page.Events); len(ids) != 1 || page.NextCursor != FormatCursor("2026-10-07T12Z.jsonl", int64(len("{\"id\":\"a\"}\n"))) {
+		t.Fatalf("page = %+v", page)
+	}
+	// Once a newer file exists the torn line will never complete: move on.
+	if err := os.WriteFile(filepath.Join(dir, "2026-10-07T13Z.jsonl"), []byte("{\"id\":\"c\"}\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	page, err = Read(dir, page.NextCursor, 10)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if ids := eventIDs(t, page.Events); len(ids) != 1 || ids[0] != "c" || page.NextCursor != FormatCursor("2026-10-07T13Z.jsonl", int64(len("{\"id\":\"c\"}\n"))) {
+		t.Fatalf("page after rotation = %+v", page)
+	}
+}

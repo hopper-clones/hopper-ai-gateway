@@ -69,6 +69,14 @@ func (s *Store) Ack(consumer, cursor string) error {
 	return s.cursors.Ack(consumer, cursor)
 }
 
+// DeleteCursor forgets a consumer's acked cursor.
+func (s *Store) DeleteCursor(consumer string) error {
+	if s == nil {
+		return ErrUnknownConsumer
+	}
+	return s.cursors.Delete(consumer)
+}
+
 // Cursors lists every consumer's acked cursor.
 func (s *Store) Cursors() (map[string]AckedCursor, error) {
 	if s == nil {

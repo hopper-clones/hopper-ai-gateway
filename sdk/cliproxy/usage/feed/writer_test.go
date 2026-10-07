@@ -210,3 +210,65 @@ type movingClock struct {
 
 func (c *movingClock) Now() time.Time   { return c.at }
 func (c *movingClock) Set(at time.Time) { c.at = at }
+
+func TestWriterCountsDropsAfterClose(t *testing.T) {
+	at := time.Date(2026, 10, 7, 12, 0, 0, 0, time.UTC)
+	w, err := NewWriter(t.TempDir(), WithClock(fixedClock(at)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := w.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if w.Write(NewUsageEvent("late", at)) {
+		t.Fatal("write after close must fail")
+	}
+	if w.Dropped() != 1 {
+		t.Fatalf("dropped = %d, want 1", w.Dropped())
+	}
+}
+
+// tornFile fails its first write after half the bytes, like a disk-full tear.
+type tornFile struct {
+	data   []byte
+	writes int
+}
+
+func (f *tornFile) Write(p []byte) (int, error) {
+	f.writes++
+	if f.writes == 1 {
+		half := len(p) / 2
+		f.data = append(f.data, p[:half]...)
+		return half, fmt.Errorf("torn write")
+	}
+	f.data = append(f.data, p...)
+	return len(p), nil
+}
+func (f *tornFile) Sync() error  { return nil }
+func (f *tornFile) Close() error { return nil }
+func (f *tornFile) Truncate(size int64) error {
+	f.data = f.data[:size]
+	return nil
+}
+func (f *tornFile) Seek(offset int64, whence int) (int64, error) {
+	return int64(len(f.data)), nil
+}
+
+func TestWriterTruncatesTornWriteBeforeNextBatch(t *testing.T) {
+	at := time.Date(2026, 10, 7, 12, 0, 0, 0, time.UTC)
+	file := &tornFile{}
+	ticks := make(chan time.Time)
+	w, err := NewWriter(t.TempDir(), WithClock(fixedClock(at)), WithTicker(ticks), withFileOpener(func(string) (feedFile, error) { return file, nil }))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = w.Close() }()
+	w.Write(NewUsageEvent("first", at))
+	w.Flush()
+	w.Write(NewUsageEvent("second", at))
+	w.Flush()
+	want, _ := json.Marshal(NewUsageEvent("second", at))
+	if string(file.data) != string(want)+"\n" {
+		t.Fatalf("file after torn write = %q, want only the second event", file.data)
+	}
+}

@@ -5,11 +5,12 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"strings"
+	"sync/atomic"
 	"time"
 
-	"github.com/gin-gonic/gin"
 	coreauth "github.com/router-for-me/CLIProxyAPI/v8/sdk/cliproxy/auth"
 	"github.com/router-for-me/CLIProxyAPI/v8/sdk/cliproxy/usage"
+	log "github.com/sirupsen/logrus"
 )
 
 // AccountResolver returns the account email behind a gateway auth id when known.
@@ -21,6 +22,15 @@ type Plugin struct {
 	store   *Store
 	resolve AccountResolver
 	now     func() time.Time
+	dropped atomic.Uint64
+}
+
+// Dropped counts events discarded because their tokens could not be normalized.
+func (p *Plugin) Dropped() uint64 {
+	if p == nil {
+		return 0
+	}
+	return p.dropped.Load()
 }
 
 // NewPlugin binds the feed store and the account resolver.
@@ -49,7 +59,7 @@ func AccountHash(email string) *string {
 }
 
 // HandleUsage implements usage.Plugin.
-func (p *Plugin) HandleUsage(ctx context.Context, record usage.Record) {
+func (p *Plugin) HandleUsage(_ context.Context, record usage.Record) {
 	if p == nil || p.store == nil {
 		return
 	}
@@ -57,20 +67,27 @@ func (p *Plugin) HandleUsage(ctx context.Context, record usage.Record) {
 	accountHash := p.accountHash(record.AuthID)
 	event := NewUsageEvent(record.RequestID, at)
 	event.KeyID = KeyID(record.APIKey)
-	event.Lane, event.Project, event.Task = laneIdentity(ctx)
+	event.Lane, event.Project, event.Task = record.Lane, record.Project, record.Task
 	event.AccountID = record.AuthID
 	event.AccountHash = accountHash
 	event.Provider = record.Provider
 	event.Model = record.Model
 	event.Effort = record.ReasoningEffort
-	event.Tokens = tokensOf(record.Detail)
 	event.LatencyMS = record.Latency.Milliseconds()
-	event.CacheHit = cacheHit(event.Tokens)
 	event.Status = "ok"
 	if record.Failed {
 		event.Status = "error"
 	}
-	p.store.Write(event)
+	if tokens, ok := normalizeTokens(record); ok {
+		event.Tokens = tokens
+		event.CacheHit = cacheHit(event.Tokens)
+		p.store.Write(event)
+	} else {
+		p.dropped.Add(1)
+		log.WithFields(log.Fields{"request_id": record.RequestID, "provider": record.Provider, "dropped_total": p.dropped.Load()}).
+			Warn("usage feed: token breakdown cannot be normalized, usage event dropped")
+	}
+	// Quota windows do not depend on token accounting: observe them regardless.
 
 	var quota coreauth.QuotaState
 	if !quota.ObserveResponseHeadersForProvider(record.Provider, record.ResponseHeaders, at) {
@@ -112,43 +129,39 @@ func (p *Plugin) accountHash(authID string) *string {
 	return AccountHash(email)
 }
 
-// laneIdentity reads the lane key metadata the access provider stored on the gin context.
-func laneIdentity(ctx context.Context) (lane, project, task string) {
-	if ctx == nil {
-		return "", "", ""
+// normalizeTokens builds the feed's token view from the accounting breakdown so
+// every provider means the same thing: input includes cache reads and writes,
+// output includes reasoning, total = input + output. Providers report these
+// differently (Anthropic's input_tokens excludes cache reads; OpenAI's
+// prompt_tokens includes them), which is why the raw Detail counters are never
+// copied. A record with no tokens at all normalizes to zeros; a breakdown that
+// cannot satisfy the invariants is refused.
+func normalizeTokens(record usage.Record) (Tokens, bool) {
+	if !detailHasTokens(record.Detail) {
+		return Tokens{}, true
 	}
-	ginCtx, ok := ctx.Value("gin").(*gin.Context)
-	if !ok || ginCtx == nil {
-		return "", "", ""
+	breakdown := usage.EnsureTokenBreakdownForProvider(record.Detail, record.Provider, record.ExecutorType).TokenBreakdown
+	if !breakdown.Valid() || breakdown.UnclassifiedTokens != 0 {
+		return Tokens{}, false
 	}
-	raw, exists := ginCtx.Get("accessMetadata")
-	if !exists {
-		return "", "", ""
+	tokens := Tokens{
+		Input:       breakdown.Input.TotalTokens,
+		CachedInput: breakdown.Input.CacheReadTokens,
+		CacheWrite:  breakdown.Input.CacheWriteTokens,
+		Output:      breakdown.Output.TotalTokens,
+		Reasoning:   breakdown.Output.ReasoningTokens,
+		Total:       breakdown.Input.TotalTokens + breakdown.Output.TotalTokens,
 	}
-	metadata, ok := raw.(map[string]string)
-	if !ok {
-		return "", "", ""
+	if tokens.CachedInput > tokens.Input || tokens.Reasoning > tokens.Output || tokens.Total != tokens.Input+tokens.Output {
+		return Tokens{}, false
 	}
-	return metadata["lane"], metadata["project"], metadata["task"]
+	return tokens, true
 }
 
-func tokensOf(detail usage.Detail) Tokens {
-	cached := detail.CachedTokens
-	if cached == 0 {
-		cached = detail.CacheReadTokens
-	}
-	total := detail.TotalTokens
-	if total == 0 {
-		total = detail.InputTokens + detail.OutputTokens
-	}
-	return Tokens{
-		Input:       detail.InputTokens,
-		CachedInput: cached,
-		CacheWrite:  detail.CacheCreationTokens,
-		Output:      detail.OutputTokens,
-		Reasoning:   detail.ReasoningTokens,
-		Total:       total,
-	}
+func detailHasTokens(detail usage.Detail) bool {
+	return detail.InputTokens != 0 || detail.OutputTokens != 0 || detail.ReasoningTokens != 0 ||
+		detail.CachedTokens != 0 || detail.CacheReadTokens != 0 || detail.CacheCreationTokens != 0 ||
+		detail.TotalTokens != 0 || detail.TokenBreakdown.TotalTokens != 0
 }
 
 // cacheHit is unknown (nil) until the response reported input tokens.

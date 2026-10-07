@@ -41,8 +41,12 @@ func (c *Cursors) Ack(consumer, cursor string) error {
 	if !consumerNamePattern.MatchString(consumer) {
 		return fmt.Errorf("usage feed: invalid consumer name %q", consumer)
 	}
-	if _, _, err := ParseCursor(cursor); err != nil {
+	file, offset, err := ParseCursor(cursor)
+	if err != nil {
 		return err
+	}
+	if _, errStat := os.Stat(filepath.Join(filepath.Dir(c.path), file)); errStat != nil {
+		return fmt.Errorf("usage feed: cursor names a file that does not exist: %s", file)
 	}
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -50,7 +54,34 @@ func (c *Cursors) Ack(consumer, cursor string) error {
 	if err != nil {
 		return err
 	}
+	if previous, exists := current[consumer]; exists {
+		prevFile, prevOffset, errPrev := ParseCursor(previous.Cursor)
+		if errPrev == nil && (file < prevFile || (file == prevFile && offset < prevOffset)) {
+			return fmt.Errorf("usage feed: cursor %s moves backwards from %s", cursor, previous.Cursor)
+		}
+	}
 	current[consumer] = AckedCursor{Cursor: cursor, AckedAt: Time(c.now())}
+	return c.saveLocked(current)
+}
+
+// ErrUnknownConsumer reports a delete for a consumer that never acked.
+var ErrUnknownConsumer = errors.New("usage feed: unknown consumer")
+
+// Delete forgets a consumer so it no longer holds retention.
+func (c *Cursors) Delete(consumer string) error {
+	if c == nil {
+		return errors.New("usage feed: cursors unavailable")
+	}
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	current, err := c.loadLocked()
+	if err != nil {
+		return err
+	}
+	if _, exists := current[consumer]; !exists {
+		return ErrUnknownConsumer
+	}
+	delete(current, consumer)
 	return c.saveLocked(current)
 }
 

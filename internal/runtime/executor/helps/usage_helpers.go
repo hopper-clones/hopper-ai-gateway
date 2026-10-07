@@ -39,6 +39,9 @@ type UsageReporter struct {
 	accessTokenHash     string
 	authType            string
 	apiKey              string
+	lane                string
+	project             string
+	task                string
 	sessionID           string
 	parentSessionID     string
 	source              string
@@ -84,6 +87,7 @@ func NewExecutorUsageReporter(ctx context.Context, executor usageExecutor, model
 
 func NewUsageReporter(ctx context.Context, provider, model string, auth *cliproxyauth.Auth) *UsageReporter {
 	apiKey := APIKeyFromContext(ctx)
+	lane, project, task := LaneIdentityFromContext(ctx)
 	alias := usage.RequestedModelAliasFromContext(ctx)
 	if alias == "" {
 		alias = model
@@ -122,6 +126,9 @@ func NewUsageReporter(ctx context.Context, provider, model string, auth *cliprox
 		alias:           strings.TrimSpace(alias),
 		requestedAt:     time.Now(),
 		apiKey:          apiKey,
+		lane:            lane,
+		project:         project,
+		task:            task,
 		sessionID:       sessionID,
 		parentSessionID: parentSessionID,
 		source:          resolveUsageSource(auth, apiKey),
@@ -619,6 +626,9 @@ func (r *UsageReporter) buildRecordForModel(model string, detail usage.Detail, f
 		Alias:               r.alias,
 		Source:              r.source,
 		APIKey:              r.apiKey,
+		Lane:                r.lane,
+		Project:             r.project,
+		Task:                r.task,
 		SessionID:           r.sessionID,
 		ParentSessionID:     r.parentSessionID,
 		AuthID:              r.authID,
@@ -764,6 +774,28 @@ func APIKeyFromContext(ctx context.Context) string {
 		}
 	}
 	return ""
+}
+
+// LaneIdentityFromContext reads the lane key metadata the access provider stored
+// on the gin context. Call it on the request goroutine; the gin context is
+// recycled once the request completes.
+func LaneIdentityFromContext(ctx context.Context) (lane, project, task string) {
+	if ctx == nil {
+		return "", "", ""
+	}
+	ginCtx, ok := ctx.Value("gin").(*gin.Context)
+	if !ok || ginCtx == nil {
+		return "", "", ""
+	}
+	raw, exists := ginCtx.Get("accessMetadata")
+	if !exists {
+		return "", "", ""
+	}
+	metadata, ok := raw.(map[string]string)
+	if !ok {
+		return "", "", ""
+	}
+	return metadata["lane"], metadata["project"], metadata["task"]
 }
 
 func resolveUsageSource(auth *cliproxyauth.Auth, ctxAPIKey string) string {

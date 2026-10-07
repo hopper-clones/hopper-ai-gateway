@@ -46,6 +46,12 @@ type Record struct {
 	ReasoningEffort string
 	// ServiceTier stores the client-requested service tier.
 	ServiceTier string
+	// Lane, Project and Task identify the lane key that authenticated the request.
+	// They are captured when the request starts, never read back from the request
+	// context at dispatch time, because that context is recycled by then.
+	Lane    string
+	Project string
+	Task    string
 	// RequestServiceTier is a deprecated input-only alias retained for existing
 	// plugin callers. It is normalized into ServiceTier and never emitted.
 	RequestServiceTier string
@@ -302,6 +308,7 @@ type Manager struct {
 	once     sync.Once
 	stopOnce sync.Once
 	cancel   context.CancelFunc
+	done     chan struct{}
 
 	mu     sync.Mutex
 	cond   *sync.Cond
@@ -315,7 +322,7 @@ type Manager struct {
 
 // NewManager constructs a manager with a buffered queue.
 func NewManager(buffer int) *Manager {
-	m := &Manager{}
+	m := &Manager{done: make(chan struct{})}
 	m.cond = sync.NewCond(&m.mu)
 	return m
 }
@@ -335,7 +342,8 @@ func (m *Manager) Start(ctx context.Context) {
 	})
 }
 
-// Stop stops the dispatcher and drains the queue.
+// Stop closes the queue and returns once the dispatcher has delivered every
+// record published before the call. Records published after Stop are discarded.
 func (m *Manager) Stop() {
 	if m == nil {
 		return
@@ -346,8 +354,12 @@ func (m *Manager) Stop() {
 		}
 		m.mu.Lock()
 		m.closed = true
+		started := m.cancel != nil
 		m.mu.Unlock()
 		m.cond.Broadcast()
+		if started {
+			<-m.done
+		}
 	})
 }
 
@@ -418,6 +430,7 @@ func (m *Manager) Publish(ctx context.Context, record Record) {
 }
 
 func (m *Manager) run(ctx context.Context) {
+	defer close(m.done)
 	for {
 		m.mu.Lock()
 		for !m.closed && len(m.queue) == 0 {
