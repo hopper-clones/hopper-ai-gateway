@@ -2248,5 +2248,27 @@
     "unavailable": "Resets are currently unavailable.",
     "rate_limited": "Request rate limited.",
     "auth_error": "Authorization was refused."
+  },
+  "quick_start": {
+    "title": "Quick start",
+    "accounts_title": "Connect your accounts",
+    "accounts_body": "Sign in to Codex or Claude, or import credentials you already own. Gateway client keys are separate from provider credentials.",
+    "oauth_action": "Connect an account",
+    "credentials_action": "Manage credentials",
+    "routing_title": "Keep requests on the right account",
+    "routing_body": "In Configuration, set routing.strategy to reset-first and enable routing.session-affinity. Keep the session identity stable so a conversation can reuse its account and cache.",
+    "config_action": "Open configuration",
+    "websocket_body": "For Codex, enable WebSockets on each credential in Authentication files. API-key credentials use api-keys.codex[].keys[].websockets: true. The client must also enable WebSockets.",
+    "quota_title": "Refresh quota before your first request",
+    "quota_body": "Open Quota and refresh your accounts. Confirm the refresh applied to routing. Unknown, incomplete or unsupported observations are not measured reset deadlines.",
+    "quota_action": "Refresh account quota",
+    "client_title": "Point Codex at this gateway",
+    "client_body": "Add this provider to ~/.codex/config.toml. Replace YOUR_GATEWAY_KEY with a gateway client key and YOUR_MODEL with a model listed by this gateway. Codex 0.156 and later use model discovery.",
+    "copy_config": "Copy Codex configuration",
+    "copied": "Configuration copied",
+    "copy_failed": "Could not copy configuration",
+    "private_access": "Use loopback by default. For access from another device, use a private Tailscale connection and keep gateway authentication enabled.",
+    "tailscale_action": "Private access with Tailscale",
+    "client_docs": "Codex setup documentation"
   }
 }

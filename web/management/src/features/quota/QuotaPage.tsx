@@ -293,6 +293,8 @@ export function QuotaPage() {
             onChange={handleTabChange}
           />
           <Select
+            className={styles.viewSelector}
+            fullWidth={false}
             value={view}
             options={[
               { value: 'ledger', label: t('quota_management.ledger_view') },

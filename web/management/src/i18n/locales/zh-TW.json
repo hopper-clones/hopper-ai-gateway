@@ -2272,5 +2272,27 @@
     "unavailable": "重置暫不可用。",
     "rate_limited": "請求過於頻繁。",
     "auth_error": "授權遭拒。"
+  },
+  "quick_start": {
+    "title": "快速開始",
+    "accounts_title": "連接帳戶",
+    "accounts_body": "登入 Codex 或 Claude，或匯入已有的憑證。閘道用戶端金鑰與供應商憑證分開管理。",
+    "oauth_action": "連接帳戶",
+    "credentials_action": "管理憑證",
+    "routing_title": "將請求傳送到合適的帳戶",
+    "routing_body": "在設定中，將 routing.strategy 設為 reset-first，並啟用 routing.session-affinity。保持工作階段識別穩定，讓對話重用帳戶與快取。",
+    "config_action": "開啟設定",
+    "websocket_body": "對於 Codex，在驗證檔案中為每個憑證啟用 WebSockets。API 金鑰憑證使用 api-keys.codex[].keys[].websockets: true。用戶端也必須啟用 WebSockets。",
+    "quota_title": "首次請求前重新整理配額",
+    "quota_body": "開啟配額頁面並重新整理帳戶。確認重新整理已套用於路由。未知、不完整或不支援的觀測不能視為已測量的重設時間。",
+    "quota_action": "重新整理帳戶配額",
+    "client_title": "讓 Codex 連接此閘道",
+    "client_body": "將此供應商加入 ~/.codex/config.toml。以閘道用戶端金鑰取代 YOUR_GATEWAY_KEY，以閘道列出的模型取代 YOUR_MODEL。Codex 0.156 及更新版本使用模型探索。",
+    "copy_config": "複製 Codex 設定",
+    "copied": "設定已複製",
+    "copy_failed": "無法複製設定",
+    "private_access": "預設使用本機回環位址。從其他裝置存取時，使用私人 Tailscale 連線，並保持閘道驗證啟用。",
+    "tailscale_action": "使用 Tailscale 私人存取",
+    "client_docs": "Codex 設定文件"
   }
 }

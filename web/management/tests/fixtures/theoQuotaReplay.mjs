@@ -16,8 +16,8 @@ export async function installTheoQuotaReplay(context) {
     const request = route.request();
     const target = new URL(request.url());
     const json = (body, status = 200) => route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) });
-    if (target.pathname.endsWith('/auth-files') && request.method() === 'GET') return json(fixture.authFiles);
-    if (target.pathname.endsWith('/auth-files/download')) return json({ type: 'kimi', domain: 'kimi.com' });
+    if (target.pathname.endsWith('/credentials') && request.method() === 'GET') return json(fixture.authFiles);
+    if (target.pathname.endsWith('/credentials/download')) return json({ type: 'kimi', domain: 'kimi.com' });
     if (/reset-grants/.test(target.pathname) && request.method() === 'GET') return json({ grants: [] });
     if (!target.pathname.endsWith('/requests/api-call')) return route.continue();
     const payload = request.postDataJSON();

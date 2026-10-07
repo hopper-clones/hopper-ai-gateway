@@ -2254,5 +2254,27 @@
     "unavailable": "Tính năng đặt lại hiện không khả dụng.",
     "rate_limited": "Yêu cầu bị giới hạn tốc độ.",
     "auth_error": "Ủy quyền đã bị từ chối."
+  },
+  "quick_start": {
+    "title": "Bắt đầu nhanh",
+    "accounts_title": "Kết nối tài khoản",
+    "accounts_body": "Đăng nhập Codex hoặc Claude, hoặc nhập thông tin xác thực bạn đã có. Khóa máy khách của cổng được quản lý riêng với thông tin xác thực của nhà cung cấp.",
+    "oauth_action": "Kết nối tài khoản",
+    "credentials_action": "Quản lý thông tin xác thực",
+    "routing_title": "Gửi yêu cầu đến đúng tài khoản",
+    "routing_body": "Trong Cấu hình, đặt routing.strategy thành reset-first và bật routing.session-affinity. Giữ ổn định định danh phiên để cuộc hội thoại dùng lại tài khoản và bộ nhớ đệm.",
+    "config_action": "Mở cấu hình",
+    "websocket_body": "Với Codex, bật WebSockets cho từng thông tin xác thực trong Tệp xác thực. Thông tin xác thực bằng khóa API sử dụng api-keys.codex[].keys[].websockets: true. Máy khách cũng phải bật WebSockets.",
+    "quota_title": "Làm mới hạn mức trước yêu cầu đầu tiên",
+    "quota_body": "Mở trang Hạn mức và làm mới tài khoản. Xác nhận kết quả đã được áp dụng cho định tuyến. Quan sát không xác định, không đầy đủ hoặc không được hỗ trợ không phải là thời điểm đặt lại đã đo được.",
+    "quota_action": "Làm mới hạn mức tài khoản",
+    "client_title": "Kết nối Codex với cổng này",
+    "client_body": "Thêm nhà cung cấp này vào ~/.codex/config.toml. Thay YOUR_GATEWAY_KEY bằng khóa máy khách của cổng và YOUR_MODEL bằng một mô hình do cổng liệt kê. Codex 0.156 trở lên sử dụng tính năng khám phá mô hình.",
+    "copy_config": "Sao chép cấu hình Codex",
+    "copied": "Đã sao chép cấu hình",
+    "copy_failed": "Không thể sao chép cấu hình",
+    "private_access": "Mặc định dùng địa chỉ vòng lặp cục bộ. Để truy cập từ thiết bị khác, dùng kết nối Tailscale riêng và giữ xác thực cổng được bật.",
+    "tailscale_action": "Truy cập riêng qua Tailscale",
+    "client_docs": "Tài liệu thiết lập Codex"
   }
 }

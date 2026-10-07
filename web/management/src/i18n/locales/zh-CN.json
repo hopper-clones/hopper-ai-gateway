@@ -2246,5 +2246,27 @@
     "unavailable": "重置暂不可用。",
     "rate_limited": "请求过于频繁。",
     "auth_error": "授权被拒绝。"
+  },
+  "quick_start": {
+    "title": "快速开始",
+    "accounts_title": "连接账户",
+    "accounts_body": "登录 Codex 或 Claude，或导入已有的凭据。网关客户端密钥与提供商凭据分开管理。",
+    "oauth_action": "连接账户",
+    "credentials_action": "管理凭据",
+    "routing_title": "将请求发送到合适的账户",
+    "routing_body": "在配置中，将 routing.strategy 设为 reset-first，并启用 routing.session-affinity。保持会话标识稳定，让对话复用账户与缓存。",
+    "config_action": "打开配置",
+    "websocket_body": "对于 Codex，在认证文件中为每个凭据启用 WebSockets。API 密钥凭据使用 api-keys.codex[].keys[].websockets: true。客户端也必须启用 WebSockets。",
+    "quota_title": "首次请求前刷新配额",
+    "quota_body": "打开配额页面并刷新账户。确认刷新已应用于路由。未知、不完整或不支持的观测不能视为已测量的重置时间。",
+    "quota_action": "刷新账户配额",
+    "client_title": "让 Codex 连接此网关",
+    "client_body": "将此提供商添加到 ~/.codex/config.toml。用网关客户端密钥替换 YOUR_GATEWAY_KEY，用网关列出的模型替换 YOUR_MODEL。Codex 0.156 及更高版本使用模型发现。",
+    "copy_config": "复制 Codex 配置",
+    "copied": "配置已复制",
+    "copy_failed": "无法复制配置",
+    "private_access": "默认使用本机回环地址。从其他设备访问时，使用私有 Tailscale 连接，并保持网关认证开启。",
+    "tailscale_action": "使用 Tailscale 私有访问",
+    "client_docs": "Codex 配置文档"
   }
 }

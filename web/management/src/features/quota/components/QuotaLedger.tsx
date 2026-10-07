@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { IconRefreshCw } from '@/components/ui/icons';
 import type { ResolvedTheme } from '@/types';
@@ -83,6 +83,8 @@ function LedgerRow({
 }: Props & { entry: QuotaFileEntry }) {
   const { t } = useTranslation();
   const quota = quotaFor(entry);
+  const [showDetails, setShowDetails] = useState(false);
+  const detailsId = useId();
   const adapter = QUOTA_ADAPTERS[entry.type];
   const status = quota?.status ?? 'idle';
   const blocked =
@@ -105,7 +107,20 @@ function LedgerRow({
   return (
     <article className={`${styles.row} ${entry.file.disabled ? styles.disabled : ''}`}>
       <div className={styles.identity}>
-        <strong>{name}</strong>
+        <strong>
+          {quota && status === 'success' ? (
+            <button
+              className={styles.identityDetails}
+              type="button"
+              aria-label={`${name} · ${t('quota_management.ledger_details')}`}
+              aria-expanded={showDetails}
+              aria-controls={detailsId}
+              onClick={() => setShowDetails(!showDetails)}
+            >
+              {name}
+            </button>
+          ) : name}
+        </strong>
         {quota && 'observedAtMs' in quota && (
           <small className={styles.observed}>
             {t('quota_management.ledger_observed', {
@@ -120,12 +135,6 @@ function LedgerRow({
           {translatedPlan}
           {entry.file.disabled && ` · ${t('common.disabled')}`}
         </span>
-        {quota && status === 'success' && (
-          <details className={styles.details}>
-            <summary>{t('quota_management.ledger_details')}</summary>
-            <adapter.Body quota={quota} classes={bodyClasses} />
-          </details>
-        )}
       </div>
       <div className={styles.windows}>
         {quota?.routingObservation &&
@@ -158,7 +167,7 @@ function LedgerRow({
           <IconRefreshCw size={14} />
           {t('auth_files.quota_refresh_single')}
         </button>
-        {entry.type === 'claude' && ((reset.count != null && reset.count > 0) || reset.message) && (
+        {entry.type === 'claude' && !reset.blocked && (
           <button type="button" onClick={reset.confirm} disabled={reset.blocked}>
             {t(`claude_reset.${reset.buttonLabel}`)}
             {reset.count != null && ` (${reset.count})`}
@@ -170,6 +179,16 @@ function LedgerRow({
           </button>
         )}
       </div>
+      {quota && status === 'success' && showDetails && (
+        <div className={styles.details} id={detailsId}>
+          <adapter.Body quota={quota} classes={bodyClasses} />
+          {reset.message && (
+            <small className={styles.resetNotice} role="status">
+              {t(`claude_reset.${reset.message}`)}
+            </small>
+          )}
+        </div>
+      )}
     </article>
   );
 }

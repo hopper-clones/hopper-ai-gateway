@@ -36,6 +36,21 @@
   }
 }
 
+.viewSelector {
+  flex: 0 0 174px;
+  width: 174px;
+  max-width: 174px;
+}
+
+@media (min-width: 1200px) {
+  .page {
+    gap: 42px;
+  }
+  .workbench {
+    gap: 28px;
+  }
+}
+
 .toolbar {
   display: flex;
   align-items: center;
