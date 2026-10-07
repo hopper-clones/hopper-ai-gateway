@@ -1787,6 +1787,10 @@ func (m *Manager) pickNextLegacy(ctx context.Context, provider, model string, op
 	}
 	m.mu.RUnlock()
 
+	if peekOnly(ctx) {
+		// A read-only answer never consults the plugin scheduler: its state must not move.
+		pluginScheduler = nil
+	}
 	selected, handled, errPick := m.pickViaPluginScheduler(ctx, pluginScheduler, provider, []string{provider}, model, opts, tried, available)
 	if errPick != nil {
 		m.warnLogAuthUnavailable(ctx, []string{provider}, model, opts, tried, errPick)
@@ -1794,7 +1798,7 @@ func (m *Manager) pickNextLegacy(ctx context.Context, provider, model string, op
 	}
 	if !handled {
 		selectorCtx := m.resetQuotaSelectorContext(selectorContextForAvailableAuths(ctx, selector, model), selectorAuths, model, selector)
-		selected, errPick = selector.Pick(selectorCtx, provider, selectionArgForSelector(selector, model), opts, selectorAuths)
+		selected, errPick = selectWithPeek(selectorCtx, selector, provider, selectionArgForSelector(selector, model), opts, selectorAuths)
 		if errPick != nil {
 			if isBuiltInSelector(selector) {
 				errPick = restoreModelCooldownErrorModel(errPick, model)
