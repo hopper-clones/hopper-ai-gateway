@@ -18,9 +18,9 @@ This is a React 19 + TypeScript + Vite management frontend for CLI Proxy API, no
 Use Bun; `package.json` pins `bun@1.3.14`, and CI uses Node.js 24. Keep dependency changes consistent with `bun.lock`; do not introduce another package manager's lockfile.
 
 - `bun install --frozen-lockfile`: install locked dependencies.
-- `bun run dev`: start Vite at `http://localhost:5173` by default.
+- Start Vite only through Hopper Lifecycle: `hopper-lifecycle run --name gateway-console --lease 2h --port web=5173 -- bun run dev --host 127.0.0.1 --port {port}`.
 - `bun run build`: TypeScript compilation followed by the production Vite build.
-- `bun run preview`: serve the built output locally.
+- Serve the built output through `hopper-lifecycle run --name gateway-console-preview --lease 2h --port web=4173 -- bun run preview --host 127.0.0.1 --port {port}`.
 - `bun run test`: run all Bun tests.
 - `bun test tests/apiError.test.ts`: example focused test run.
 - `bun run lint`: run ESLint over TypeScript/TSX files. Some rules emit warnings; the current command does not enforce zero warnings.
@@ -36,7 +36,7 @@ Preserve hash routing and single-file deployment. Changes to assets, imports, co
 
 ## API Contracts & State
 
-- Treat backend contracts as the source of truth. Inspect `../CLIProxyAPI` before changing endpoint names, payloads, provider keys, OAuth callback parameters, auth-file semantics, or plugin/config contracts. If that checkout is unavailable, report the missing evidence rather than guessing; do not modify the backend unless requested.
+- Treat backend contracts as the source of truth. Inspect the backend at `../..` before changing endpoint names, payloads, provider keys, OAuth callback parameters, auth-file semantics, or plugin/config contracts. If that checkout is unavailable, report the missing evidence rather than guessing; do not modify the backend unless requested.
 - Reuse `apiClient` from `src/services/api/client.ts` for Management API requests through domain modules. It centralizes the API prefix, bearer authentication, error normalization, and response-header handling. Avoid bypassing it with ad hoc requests in components.
 - Preserve the client's event integration: `unauthorized` handles 401s, `server-version-update` carries version/build metadata, and `server-plugin-support-update` carries plugin capability information. Keep plugin routes gated by backend support.
 - Normalize backend fields on read and serialize on write in the API layer; consult `transformers.ts` and the relevant domain module. Keep raw backend field-name handling out of ordinary UI components.

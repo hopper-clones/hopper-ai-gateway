@@ -1,0 +1,52 @@
+{
+  "recorded_at": "2026-10-07T10:39:56.376306+00:00",
+  "basis": "synthetic provider HTTP replay in isolated browser context; real bundled gateway and login flow",
+  "viewport": {
+    "width": 1976,
+    "height": 1090
+  },
+  "mobile_viewport": {
+    "width": 390,
+    "height": 844
+  },
+  "fixture": "web/management/tests/fixtures/theo-quota-replay.json",
+  "console_manifest": {
+    "source_sha256": "8174e2f5e641337e716a5e3622cc2fc7a63f1aa9b6b76a68b96b22f4a1ec4863",
+    "html_sha256": "061520611707634d1e249fef257aa068c9bb8309be96717fe761567f77620493",
+    "html_bytes": 3137342
+  },
+  "frontend_validation": "1508 tests + lint + TypeScript + singlefile production build passed; advancing-clock and credential-route tests subsequently passed",
+  "backend_validation": "go test ./... and go build passed; targeted routing/transport/media race checks passed",
+  "browser_validation": "8 observations, 10 actual sidebar destination heading checks after completed transitions, 57 synthetic provider requests, zero JavaScript errors",
+  "provider_live_qualification": "not performed; fresh runtime has zero connected credentials",
+  "artifacts": {
+    "final-v5-1976-quota-measurements.json": {
+      "sha256": "ab09e80fe058edb443446841c94372d07fc085bb49ee9d848828ab50766add55",
+      "bytes": 7176
+    },
+    "final-v5-1976-quota-replay.png": {
+      "sha256": "c230b6223ea923d0d8a530018269b2247aa2609795727ed2818b373835d4ad1f",
+      "bytes": 227230
+    },
+    "final-v5-browser-journey.json": {
+      "sha256": "61d78da2558faba1970a09cca082cdb0e5095a363461f88b27f7abc07a5a34ea",
+      "bytes": 10274
+    },
+    "final-v5-mobile-quota.png": {
+      "sha256": "919fe04bcaec80af6da7441bd462d5de96a0fc1e17d1df7917b3bf70472497dc",
+      "bytes": 55832
+    },
+    "final-v5-quick-start-dom.json": {
+      "sha256": "c1f885e3571d859b252b04af006c1eb6a0672d967b78c9b51b3ef65ed7865caf",
+      "bytes": 228
+    },
+    "final-v5-quick-start.png": {
+      "sha256": "089a528deee8fab357e264d2c5edc85de98ac2751b0d54b865ff9ace06679549",
+      "bytes": 194098
+    }
+  },
+  "browser_settle_contract": "Expected current heading, no exiting layers or animation flag, current layer opacity 1 and no unfinished native animations. Quick Start DOM has exactly one current layer, correct active navigation and no animations.",
+  "earlier_evidence": {
+    "inconclusive-v4": "Retained; excluded from final qualification because screenshots captured navigation in progress."
+  }
+}

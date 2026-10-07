@@ -66,3 +66,15 @@ The first full-tree run (`full-go-test.log`, retained in private operator eviden
 The embedded gzip's decompressed bytes matched the recorded HTML digest during the independent audit. Subsequent source edits require rebuilding and repackaging the console so its source digest also matches. Release packaging and any local browser evidence are recorded separately by the console owner.
 
 No claim is made here that the new binary is deployed on the owner's persistent gateway, that routing settings are enabled there, that multiple live provider accounts have been exercised, or that live subscription reset/latency/cache economics reproduce Theo's setup. Those states require their own exact runtime and provider evidence. Local preview/browser checks, when recorded separately by the console owner, are UI evidence only. No external hosting or publication follows from this work.
+
+## Final console qualification
+
+The final bundled console passed `make verify`: 1,508 frontend tests, ESLint, TypeScript, a single HTML production build, the complete Go test suite, and the gateway build. Two later focused tests qualify the advancing synthetic reference clock and credential read route; no production code changed after the final build.
+
+The original video's visible quota layout was checked by eye and measured in the running console at a 1976 × 1090 application viewport. The screenshot replay retains the displayed 409%/500% Claude and 17%/300% Codex totals, the three Claude windows, the account count badge, and reset dates. Identities and unseen account particulars are explicitly synthetic. This is visible-layout evidence, not recovery of Theo's private CSS or hidden pages.
+
+The browser journey verifies destination headings, removal of exiting layers, full current-layer opacity, and finished native animations after completed transitions for all ten other sidebar pages; provider filtering, identity reveal/remasking, individual refresh, broad weekly disclosure, remembered-login reload, and a 390 × 844 mobile work area also pass. Earlier screenshots caught transitions and are retained as inconclusive evidence in User Experience Studio and `evidence/inconclusive-v4/`. The final Quick Start DOM has one current layer, the correct active navigation, and no animations. The corrected replay clock advances normally; the final captures are immutable.
+
+[Final quota screenshot](research/theo-console/evidence/final-v5-1976-quota-replay.png), [Quick Start](research/theo-console/evidence/final-v5-quick-start.png), [mobile quota](research/theo-console/evidence/final-v5-mobile-quota.png), [complete browser journey](research/theo-console/evidence/final-v5-browser-journey.json), and [validation with exact artifact hashes](research/theo-console/validation.json) are retained in this repository.
+
+The local runtime enables reset-first and session affinity, uses the verified binary, and remains restricted to loopback. Its copied credential directory is empty; the synthetic reference accounts are never installed there. Actual provider sign-in and live cache/latency/reset behavior remain unqualified.

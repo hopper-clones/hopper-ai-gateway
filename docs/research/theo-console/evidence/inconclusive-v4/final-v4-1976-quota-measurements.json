@@ -1,0 +1,334 @@
+{
+  "url": "http://127.0.0.1:48733/management.html#/quota",
+  "errors": [],
+  "measurements": [
+    {
+      "selector": "sidebar  ",
+      "tag": "ASIDE",
+      "box": {
+        "x": 0,
+        "y": 0,
+        "width": 310.296875,
+        "height": 1090,
+        "top": 0,
+        "right": 310.296875,
+        "bottom": 1090,
+        "left": 0
+      }
+    },
+    {
+      "selector": "QuotaHeader-module__title___X-zzl",
+      "tag": "H1",
+      "box": {
+        "x": 369.5625,
+        "y": 100,
+        "width": 371.1875,
+        "height": 48.296875,
+        "top": 100,
+        "right": 740.75,
+        "bottom": 148.296875,
+        "left": 369.5625
+      }
+    },
+    {
+      "selector": "QuotaPage-module__tabsRow___99BHL",
+      "tag": "DIV",
+      "box": {
+        "x": 369.5625,
+        "y": 224.296875,
+        "width": 1539.171875,
+        "height": 45.1875,
+        "top": 224.296875,
+        "right": 1908.734375,
+        "bottom": 269.484375,
+        "left": 369.5625
+      }
+    },
+    {
+      "selector": "QuotaLedger-module__summaries___-4efJ",
+      "tag": "SECTION",
+      "box": {
+        "x": 369.5625,
+        "y": 290.484375,
+        "width": 1539.171875,
+        "height": 277,
+        "top": 290.484375,
+        "right": 1908.734375,
+        "bottom": 567.484375,
+        "left": 369.5625
+      }
+    },
+    {
+      "selector": "QuotaLedger-module__row___eh3pJ ",
+      "tag": "ARTICLE",
+      "box": {
+        "x": 369.5625,
+        "y": 641.484375,
+        "width": 1539.171875,
+        "height": 108.390625,
+        "top": 641.484375,
+        "right": 1908.734375,
+        "bottom": 749.875,
+        "left": 369.5625
+      }
+    },
+    {
+      "selector": "QuotaLedger-module__row___eh3pJ ",
+      "tag": "ARTICLE",
+      "box": {
+        "x": 369.5625,
+        "y": 749.875,
+        "width": 1539.171875,
+        "height": 108.390625,
+        "top": 749.875,
+        "right": 1908.734375,
+        "bottom": 858.265625,
+        "left": 369.5625
+      }
+    },
+    {
+      "selector": "QuotaLedger-module__row___eh3pJ ",
+      "tag": "ARTICLE",
+      "box": {
+        "x": 369.5625,
+        "y": 858.265625,
+        "width": 1539.171875,
+        "height": 108.390625,
+        "top": 858.265625,
+        "right": 1908.734375,
+        "bottom": 966.65625,
+        "left": 369.5625
+      }
+    },
+    {
+      "selector": "QuotaLedger-module__row___eh3pJ ",
+      "tag": "ARTICLE",
+      "box": {
+        "x": 369.5625,
+        "y": 966.65625,
+        "width": 1539.171875,
+        "height": 108.390625,
+        "top": 966.65625,
+        "right": 1908.734375,
+        "bottom": 1075.046875,
+        "left": 369.5625
+      }
+    },
+    {
+      "selector": "QuotaLedger-module__row___eh3pJ ",
+      "tag": "ARTICLE",
+      "box": {
+        "x": 369.5625,
+        "y": 1075.046875,
+        "width": 1539.171875,
+        "height": 108.390625,
+        "top": 1075.046875,
+        "right": 1908.734375,
+        "bottom": 1183.4375,
+        "left": 369.5625
+      }
+    },
+    {
+      "selector": "QuotaLedger-module__row___eh3pJ ",
+      "tag": "ARTICLE",
+      "box": {
+        "x": 369.5625,
+        "y": 1257.4375,
+        "width": 1539.171875,
+        "height": 108.390625,
+        "top": 1257.4375,
+        "right": 1908.734375,
+        "bottom": 1365.828125,
+        "left": 369.5625
+      }
+    },
+    {
+      "selector": "QuotaLedger-module__row___eh3pJ ",
+      "tag": "ARTICLE",
+      "box": {
+        "x": 369.5625,
+        "y": 1365.828125,
+        "width": 1539.171875,
+        "height": 108.390625,
+        "top": 1365.828125,
+        "right": 1908.734375,
+        "bottom": 1474.21875,
+        "left": 369.5625
+      }
+    },
+    {
+      "selector": "QuotaLedger-module__row___eh3pJ ",
+      "tag": "ARTICLE",
+      "box": {
+        "x": 369.5625,
+        "y": 1474.21875,
+        "width": 1539.171875,
+        "height": 108.390625,
+        "top": 1474.21875,
+        "right": 1908.734375,
+        "bottom": 1582.609375,
+        "left": 369.5625
+      }
+    },
+    {
+      "selector": "QuotaLedger-module__row___eh3pJ ",
+      "tag": "ARTICLE",
+      "box": {
+        "x": 369.5625,
+        "y": 1656.609375,
+        "width": 1539.171875,
+        "height": 108.390625,
+        "top": 1656.609375,
+        "right": 1908.734375,
+        "bottom": 1765,
+        "left": 369.5625
+      }
+    },
+    {
+      "selector": "QuotaLedger-module__row___eh3pJ ",
+      "tag": "ARTICLE",
+      "box": {
+        "x": 369.5625,
+        "y": 1839,
+        "width": 1539.171875,
+        "height": 108.390625,
+        "top": 1839,
+        "right": 1908.734375,
+        "bottom": 1947.390625,
+        "left": 369.5625
+      }
+    }
+  ],
+  "calls": [
+    {
+      "key": "claude-1",
+      "method": "GET",
+      "path": "/api/oauth/usage"
+    },
+    {
+      "key": "claude-1",
+      "method": "GET",
+      "path": "/api/oauth/profile"
+    },
+    {
+      "key": "claude-2",
+      "method": "GET",
+      "path": "/api/oauth/usage"
+    },
+    {
+      "key": "claude-2",
+      "method": "GET",
+      "path": "/api/oauth/profile"
+    },
+    {
+      "key": "claude-3",
+      "method": "GET",
+      "path": "/api/oauth/usage"
+    },
+    {
+      "key": "claude-3",
+      "method": "GET",
+      "path": "/api/oauth/profile"
+    },
+    {
+      "key": "claude-4",
+      "method": "GET",
+      "path": "/api/oauth/usage"
+    },
+    {
+      "key": "claude-4",
+      "method": "GET",
+      "path": "/api/oauth/profile"
+    },
+    {
+      "key": "claude-5",
+      "method": "GET",
+      "path": "/api/oauth/usage"
+    },
+    {
+      "key": "claude-5",
+      "method": "GET",
+      "path": "/api/oauth/profile"
+    },
+    {
+      "key": "codex-1",
+      "method": "GET",
+      "path": "/backend-api/wham/usage"
+    },
+    {
+      "key": "codex-2",
+      "method": "GET",
+      "path": "/backend-api/wham/usage"
+    },
+    {
+      "key": "codex-3",
+      "method": "GET",
+      "path": "/backend-api/wham/usage"
+    },
+    {
+      "key": "xai-1",
+      "method": "GET",
+      "path": "/v1/billing"
+    },
+    {
+      "key": "xai-1",
+      "method": "GET",
+      "path": "/v1/billing"
+    },
+    {
+      "key": "claude-1",
+      "method": "GET",
+      "path": "/api/oauth/usage"
+    },
+    {
+      "key": "claude-2",
+      "method": "GET",
+      "path": "/api/oauth/usage"
+    },
+    {
+      "key": "claude-3",
+      "method": "GET",
+      "path": "/api/oauth/usage"
+    },
+    {
+      "key": "claude-4",
+      "method": "GET",
+      "path": "/api/oauth/usage"
+    },
+    {
+      "key": "claude-5",
+      "method": "GET",
+      "path": "/api/oauth/usage"
+    },
+    {
+      "key": "codex-1",
+      "method": "GET",
+      "path": "/backend-api/wham/rate-limit-reset-credits"
+    },
+    {
+      "key": "codex-2",
+      "method": "GET",
+      "path": "/backend-api/wham/rate-limit-reset-credits"
+    },
+    {
+      "key": "codex-3",
+      "method": "GET",
+      "path": "/backend-api/wham/rate-limit-reset-credits"
+    },
+    {
+      "key": "xai-1",
+      "method": "GET",
+      "path": "/v1/user"
+    },
+    {
+      "key": "xai-1",
+      "method": "GET",
+      "path": "/v1/settings"
+    },
+    {
+      "key": "kimi-1",
+      "method": "GET",
+      "path": "/coding/v1/usages"
+    }
+  ]
+}

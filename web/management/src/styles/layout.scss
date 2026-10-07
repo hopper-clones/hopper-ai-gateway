@@ -3,7 +3,7 @@
 :root {
   --header-height: 80px;
   --shell-gutter: 24px;
-  --sidebar-panel-width: clamp(216px, 15.4vw, 328px);
+  --sidebar-panel-width: clamp(216px, calc(15.4vw + 6px), 328px);
   --sidebar-collapsed-width: 60px;
   --sidebar-active-width: var(--sidebar-panel-width);
   --sidebar-gap: 0px;
@@ -396,7 +396,7 @@
   z-index: $z-dropdown - 1;
   width: var(--sidebar-panel-width);
   height: 100vh;
-  padding: 14px 10px;
+  padding: 24px 14px;
   display: flex;
   flex-direction: column;
   gap: $spacing-sm;
@@ -493,7 +493,7 @@
     gap: 10px;
     min-width: 0;
     flex: 1;
-    padding: 0 6px;
+    padding: 0 9px;
     color: var(--text-primary);
   }
 
@@ -536,7 +536,7 @@
   .nav-section {
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 18px;
     flex: 1;
   }
 
@@ -547,7 +547,7 @@
   }
 
   .nav-group-label {
-    padding: 0 10px 2px;
+    padding: 0 15px 2px;
     font-size: clamp(10px, .7vw, 14px);
     font-weight: 700;
     letter-spacing: 0.08em;
@@ -598,7 +598,7 @@
   }
 
   .nav-item {
-    padding: 10px 14px;
+    padding: 10px 19px;
     border-radius: 12px;
     border: 1px solid transparent;
     color: var(--text-primary);
@@ -616,8 +616,8 @@
       transform $transition-fast;
 
     .nav-icon {
-      width: 18px;
-      height: 18px;
+      width: 24px;
+      height: 24px;
       display: inline-flex;
       align-items: center;
       justify-content: center;
@@ -626,15 +626,15 @@
       transition: color $transition-fast;
 
       svg {
-        width: 16px;
-        height: 16px;
+        width: 22px;
+        height: 22px;
         display: block;
       }
 
       img {
         display: block;
-        width: 16px;
-        height: 16px;
+        width: 22px;
+        height: 22px;
         border-radius: 4px;
         object-fit: cover;
       }
@@ -655,8 +655,8 @@
     }
 
     .nav-badge {
-      min-width: 18px;
-      height: 18px;
+      min-width: 24px;
+      height: 24px;
       margin-left: auto;
       padding: 0 5px;
       display: inline-flex;
@@ -712,8 +712,8 @@
       font-weight: 600;
 
       .nav-icon {
-        width: 16px;
-        height: 16px;
+        width: 22px;
+        height: 22px;
       }
     }
 
@@ -953,7 +953,7 @@
 
     &.collapsed {
       width: var(--sidebar-panel-width);
-      padding: 14px 10px;
+      padding: 24px 14px;
 
       .sidebar-brand,
       .nav-item {

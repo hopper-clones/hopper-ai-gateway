@@ -1,0 +1,269 @@
+{
+  "basis": "synthetic fixture in isolated browser context",
+  "observations": [
+    {
+      "step": "login and aggregate refresh",
+      "route": "http://127.0.0.1:48733/management.html#/quota",
+      "quotaCalls": 26,
+      "errors": [],
+      "body": "Quota Management\n\n10 credentials\n·\n10 loaded\n\nShow emails\nRefresh\nAll\n10\nClaude\n5\nAntigravity\n0\nCodex\n3\nxAI\n1\nKimi\n1\nLedger\nClaude\n5 credentials\n7-day Fable 5\n409%\nof 500%\nin 1 day · 09/12, 23:00\n7-day limit 454%\nShow\nCodex\n3 credentials\nWeekly limit\n17%\nof 300%\nin 2 days · 09/14, 18:23\nxAI\n1 credential\nWeekly limit\n--\nof 100%\nin 5 days · 09/17, 17:29\nKimi\n1 credential\nWeekly limit\n100%\nof 100%\nin 5 days · 09/17, 15:56\nClaude 5\nclaude-o•••@e•••.test.json\nMax\n7-day Fable 5\n58%\nin 1 day · 09/13, 13:00\n5-hour limit\n100%\nNo reset pending\n7-day limit\n79%\nin 1 day · 09/13, 13:00\nRefresh quota\nclaude-o•••@e•••.test.json\nMax\n7-day Fable 5\n100%\nin 4 days · 09/15, 22:00\n5-hour limit\n100%\nNo reset pending\n7-day limit\n100%\nin 4 days · 09/15, 22:00\nRefresh quota\nclaude-o•••@e•••.test.json\nMax\n7-day Fable 5\n100%\nin 4 days · 09/16, 14:00\n5-hour limit\n100%\nNo reset pending\n7-day limit\n100%\nin 4 days · 09/16, 14:00\nRefresh quota\nclaude-o•••@e•••.test.json\nMax\n7-day Fable 5\n51%\nin 1 day · 09/12, 23:00\n5-hour limit\n99%\nin 2 hours · 09/11, 23:50\n7-day limit\n75%\nin 1 day · 09/12, 23:00\nRefresh quota\nclaude-o•••@e•••.test.json\nMax\n7-day Fable 5\n100%\nin 5 days · 09/17, 12:00\n5-hour limit\n100%\nNo reset pending\n7-day limit\n100%\nin 5 days · 09/17, 12:00\nRefresh quota\nCodex 3\ncodex-o•••@e•••.test.json\npro\nWeekly limit\n17%\nin 2 days · 09/14, 18:23\nRefresh quota\ncodex-o•••@e•••.test.json\npro\nWeekly limit\n0%\nin 2 days · 09/14, 18:23\nRefresh quota\ncodex-o•••@e•••.test.json\npro\nWeekly limit\n0%\nin 2 days · 09/14, 18:23\nRefresh quota\nxAI 1\nxai-o•••@e•••.test.json\nWeekly limit\n--\nin 5 days · 09/17, 17:29\nRefresh quota\nKimi 1\nkimi-o•••@e•••.test.json\nWeekly limit\n100%\nin 5 days · 09/17, 15:56\nRefresh quota\nSearch and sort"
+    },
+    {
+      "step": "reload retains requested quota route",
+      "route": "http://127.0.0.1:48733/management.html#/quota"
+    },
+    {
+      "step": "Claude filter",
+      "rows": 5
+    },
+    {
+      "step": "identity reveal and masking",
+      "passed": true
+    },
+    {
+      "step": "individual quota refresh",
+      "passed": true
+    },
+    {
+      "step": "broad weekly disclosure",
+      "passed": true
+    },
+    {
+      "step": "all sidebar routes",
+      "visited": [
+        {
+          "name": "Dashboard",
+          "route": "http://127.0.0.1:48733/management.html#/",
+          "headings": [
+            "Quiet for now."
+          ]
+        },
+        {
+          "name": "Quick Start",
+          "route": "http://127.0.0.1:48733/management.html#/quick-start",
+          "headings": [
+            "Quiet for now.",
+            "Quick start"
+          ]
+        },
+        {
+          "name": "AI Providers",
+          "route": "http://127.0.0.1:48733/management.html#/ai-providers",
+          "headings": [
+            "AI Providers"
+          ]
+        },
+        {
+          "name": "Auth Files",
+          "route": "http://127.0.0.1:48733/management.html#/auth-files",
+          "headings": [
+            "AI Providers",
+            "Auth Files Management"
+          ]
+        },
+        {
+          "name": "OAuth Login",
+          "route": "http://127.0.0.1:48733/management.html#/oauth",
+          "headings": [
+            "OAuth Login"
+          ]
+        },
+        {
+          "name": "Config Panel",
+          "route": "http://127.0.0.1:48733/management.html#/config",
+          "headings": [
+            "OAuth Login",
+            "Config Panel"
+          ]
+        },
+        {
+          "name": "Plugins",
+          "route": "http://127.0.0.1:48733/management.html#/plugins",
+          "headings": [
+            "Plugin Management"
+          ]
+        },
+        {
+          "name": "Plugin Store",
+          "route": "http://127.0.0.1:48733/management.html#/plugin-store",
+          "headings": [
+            "Plugin Store"
+          ]
+        },
+        {
+          "name": "Management Center",
+          "route": "http://127.0.0.1:48733/management.html#/system",
+          "headings": [
+            "Plugin Store",
+            "Management Center Info"
+          ]
+        },
+        {
+          "name": "Logs Viewer",
+          "route": "http://127.0.0.1:48733/management.html#/logs",
+          "headings": [
+            "Logs Viewer"
+          ]
+        }
+      ]
+    },
+    {
+      "step": "mobile quota",
+      "viewport": 390,
+      "width": 390
+    }
+  ],
+  "errors": [],
+  "requests": [
+    {
+      "key": "claude-1",
+      "method": "GET",
+      "path": "/api/oauth/usage"
+    },
+    {
+      "key": "claude-1",
+      "method": "GET",
+      "path": "/api/oauth/profile"
+    },
+    {
+      "key": "claude-2",
+      "method": "GET",
+      "path": "/api/oauth/usage"
+    },
+    {
+      "key": "claude-2",
+      "method": "GET",
+      "path": "/api/oauth/profile"
+    },
+    {
+      "key": "claude-3",
+      "method": "GET",
+      "path": "/api/oauth/usage"
+    },
+    {
+      "key": "claude-3",
+      "method": "GET",
+      "path": "/api/oauth/profile"
+    },
+    {
+      "key": "claude-4",
+      "method": "GET",
+      "path": "/api/oauth/usage"
+    },
+    {
+      "key": "claude-4",
+      "method": "GET",
+      "path": "/api/oauth/profile"
+    },
+    {
+      "key": "claude-5",
+      "method": "GET",
+      "path": "/api/oauth/usage"
+    },
+    {
+      "key": "claude-5",
+      "method": "GET",
+      "path": "/api/oauth/profile"
+    },
+    {
+      "key": "codex-1",
+      "method": "GET",
+      "path": "/backend-api/wham/usage"
+    },
+    {
+      "key": "codex-2",
+      "method": "GET",
+      "path": "/backend-api/wham/usage"
+    },
+    {
+      "key": "codex-3",
+      "method": "GET",
+      "path": "/backend-api/wham/usage"
+    },
+    {
+      "key": "xai-1",
+      "method": "GET",
+      "path": "/v1/billing"
+    },
+    {
+      "key": "xai-1",
+      "method": "GET",
+      "path": "/v1/billing"
+    },
+    {
+      "key": "claude-1",
+      "method": "GET",
+      "path": "/api/oauth/usage"
+    },
+    {
+      "key": "claude-2",
+      "method": "GET",
+      "path": "/api/oauth/usage"
+    },
+    {
+      "key": "claude-3",
+      "method": "GET",
+      "path": "/api/oauth/usage"
+    },
+    {
+      "key": "claude-4",
+      "method": "GET",
+      "path": "/api/oauth/usage"
+    },
+    {
+      "key": "claude-5",
+      "method": "GET",
+      "path": "/api/oauth/usage"
+    },
+    {
+      "key": "codex-1",
+      "method": "GET",
+      "path": "/backend-api/wham/rate-limit-reset-credits"
+    },
+    {
+      "key": "codex-2",
+      "method": "GET",
+      "path": "/backend-api/wham/rate-limit-reset-credits"
+    },
+    {
+      "key": "codex-3",
+      "method": "GET",
+      "path": "/backend-api/wham/rate-limit-reset-credits"
+    },
+    {
+      "key": "xai-1",
+      "method": "GET",
+      "path": "/v1/user"
+    },
+    {
+      "key": "xai-1",
+      "method": "GET",
+      "path": "/v1/settings"
+    },
+    {
+      "key": "kimi-1",
+      "method": "GET",
+      "path": "/coding/v1/usages"
+    },
+    {
+      "key": "claude-1",
+      "method": "GET",
+      "path": "/api/oauth/usage"
+    },
+    {
+      "key": "claude-1",
+      "method": "GET",
+      "path": "/api/oauth/profile"
+    },
+    {
+      "key": "claude-1",
+      "method": "GET",
+      "path": "/api/oauth/usage"
+    },
+    {
+      "key": "claude-1",
+      "method": "GET",
+      "path": "/api/oauth/usage"
+    }
+  ]
+}

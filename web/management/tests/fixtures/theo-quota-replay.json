@@ -7,8 +7,9 @@
   "notes": [
     "Test-context HTTP replay only; never production account files or provider inference.",
     "Five Claude account values sum to visible409%/500%; broadweekly454%. FifthClaude resetnotvisible, scenariochosen.",
-    "Codex per-account6/5/6 are synthetic allocations preserving visible17%/300%, not recovered source measurements.",
-    "XAI quota remains unknown; Kimi remaining100. IDs are fictional example.test identities."
+    "XAI quota remains unknown; Kimi remaining100. IDs are fictional example.test identities.",
+    "Codex remaining17/0/0 reproduces the visible first red segment and17%/300% aggregate; unseen account particulars remain synthetic.",
+    "One unsupported synthetic credential reproduces the visible Auth Files11 versus quota10 count; its actual provider and identity are unknown."
   ],
   "authFiles": {
     "files": [
@@ -85,6 +86,13 @@
         "type": "kimi",
         "provider": "kimi",
         "auth_index": "kimi-1",
+        "disabled": false
+      },
+      {
+        "name": "synthetic-unreported-credential.json",
+        "type": "replay-unsupported",
+        "provider": "replay-unsupported",
+        "auth_index": "unreported-synthetic",
         "disabled": false
       }
     ],
@@ -253,7 +261,7 @@
           "allowed": true,
           "limit_reached": false,
           "primary_window": {
-            "used_percent": 94,
+            "used_percent": 83,
             "limit_window_seconds": 604800,
             "reset_at": 1789435380
           },
@@ -273,7 +281,7 @@
           "allowed": true,
           "limit_reached": false,
           "primary_window": {
-            "used_percent": 95,
+            "used_percent": 100,
             "limit_window_seconds": 604800,
             "reset_at": 1789435380
           },
@@ -293,7 +301,7 @@
           "allowed": true,
           "limit_reached": false,
           "primary_window": {
-            "used_percent": 94,
+            "used_percent": 100,
             "limit_window_seconds": 604800,
             "reset_at": 1789435380
           },

@@ -1,0 +1,4 @@
+{
+  "status": "inconclusive",
+  "reason": "Earlier route gate returned before navigation animation completed. Quick Start screenshot includes exiting Dashboard layer; v5 requires expected current heading, removal of exit layers, full current opacity and finished animations. Original bytes retained."
+}
