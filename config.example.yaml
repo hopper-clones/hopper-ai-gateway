@@ -100,6 +100,16 @@ access:
     - "your-api-key-2"
     - "your-api-key-3"
 
+  # Lane keys: expiring client keys that tag usage-feed events with lane, project and task.
+  # Issue them with POST /v8/management/lane-keys; expired keys are refused and pruned on save.
+  # lane-keys:
+  #   - id: lk-0123456789ab
+  #     key: "lk_<48 hex>"
+  #     lane: "lane-a"
+  #     project: "project:822b"
+  #     task: "task:a929eb4f"
+  #     expires-at: "2026-10-08T00:00:00Z"
+
 # Optional credential concurrency and observation contracts.
 
 # credentials:
@@ -1110,6 +1120,14 @@ observability:
     # The local Redis RESP usage output is disabled.
     # Default: 60. Max: 3600.
     redis-usage-queue-retention-seconds: 60
+
+  # Append-only usage feed (hopper.gateway-usage.v1): one JSON object per completed request
+  # plus one per observed quota window, in hourly files <dir>/<YYYY-MM-DDTHH>Z.jsonl.
+  # Served to loopback consumers at /v8/management/usage/feed. Changing it requires a restart.
+  usage-feed:
+    enabled: false
+    # Relative paths resolve against the config file directory.
+    dir: usage-feed
 
   # Enable pprof HTTP debug server (host:port). Keep it bound to localhost for safety.
   pprof:
