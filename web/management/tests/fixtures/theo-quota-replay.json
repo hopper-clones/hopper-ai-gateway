@@ -1,0 +1,332 @@
+{
+  "schemaVersion": "hopper.gateway.theo-quota-replay.v1",
+  "basis": "synthetic",
+  "clock": "2026-09-11T20:50:00-07:00",
+  "timezone": "America/Los_Angeles",
+  "reference": "gateway-theo-reference:20261007-091627:pictures:0,1",
+  "notes": [
+    "Test-context HTTP replay only; never production account files or provider inference.",
+    "Five Claude account values sum to visible409%/500%; broadweekly454%. FifthClaude resetnotvisible, scenariochosen.",
+    "Codex per-account6/5/6 are synthetic allocations preserving visible17%/300%, not recovered source measurements.",
+    "XAI quota remains unknown; Kimi remaining100. IDs are fictional example.test identities."
+  ],
+  "authFiles": {
+    "files": [
+      {
+        "name": "claude-operator1@example.test.json",
+        "type": "claude",
+        "provider": "claude",
+        "email": "operator1@example.test",
+        "auth_index": "claude-1",
+        "disabled": false
+      },
+      {
+        "name": "claude-operator2@example.test.json",
+        "type": "claude",
+        "provider": "claude",
+        "email": "operator2@example.test",
+        "auth_index": "claude-2",
+        "disabled": false
+      },
+      {
+        "name": "claude-operator3@example.test.json",
+        "type": "claude",
+        "provider": "claude",
+        "email": "operator3@example.test",
+        "auth_index": "claude-3",
+        "disabled": false
+      },
+      {
+        "name": "claude-operator4@example.test.json",
+        "type": "claude",
+        "provider": "claude",
+        "email": "operator4@example.test",
+        "auth_index": "claude-4",
+        "disabled": false
+      },
+      {
+        "name": "claude-operator5@example.test.json",
+        "type": "claude",
+        "provider": "claude",
+        "email": "operator5@example.test",
+        "auth_index": "claude-5",
+        "disabled": false
+      },
+      {
+        "name": "codex-operator1@example.test.json",
+        "type": "codex",
+        "provider": "codex",
+        "auth_index": "codex-1",
+        "disabled": false
+      },
+      {
+        "name": "codex-operator2@example.test.json",
+        "type": "codex",
+        "provider": "codex",
+        "auth_index": "codex-2",
+        "disabled": false
+      },
+      {
+        "name": "codex-operator3@example.test.json",
+        "type": "codex",
+        "provider": "codex",
+        "auth_index": "codex-3",
+        "disabled": false
+      },
+      {
+        "name": "xai-operator@example.test.json",
+        "type": "xai",
+        "provider": "xai",
+        "auth_index": "xai-1",
+        "disabled": false
+      },
+      {
+        "name": "kimi-operator@example.test.json",
+        "type": "kimi",
+        "provider": "kimi",
+        "auth_index": "kimi-1",
+        "disabled": false
+      }
+    ],
+    "total": 10
+  },
+  "responses": {
+    "claude-1": {
+      "usage": {
+        "five_hour": {
+          "utilization": 0,
+          "resets_at": null
+        },
+        "seven_day": {
+          "utilization": 21,
+          "resets_at": "2026-09-13T13:00:00-07:00"
+        },
+        "limits": [
+          {
+            "kind": "weekly_scoped",
+            "percent": 42,
+            "resets_at": "2026-09-13T13:00:00-07:00",
+            "is_active": true,
+            "scope": {
+              "model": {
+                "id": "claude-fable-5",
+                "display_name": "Fable 5"
+              }
+            }
+          }
+        ]
+      },
+      "profile": {
+        "account": {
+          "has_claude_max": true
+        }
+      }
+    },
+    "claude-2": {
+      "usage": {
+        "five_hour": {
+          "utilization": 0,
+          "resets_at": null
+        },
+        "seven_day": {
+          "utilization": 0,
+          "resets_at": "2026-09-15T22:00:00-07:00"
+        },
+        "limits": [
+          {
+            "kind": "weekly_scoped",
+            "percent": 0,
+            "resets_at": "2026-09-15T22:00:00-07:00",
+            "is_active": true,
+            "scope": {
+              "model": {
+                "id": "claude-fable-5",
+                "display_name": "Fable 5"
+              }
+            }
+          }
+        ]
+      },
+      "profile": {
+        "account": {
+          "has_claude_max": true
+        }
+      }
+    },
+    "claude-3": {
+      "usage": {
+        "five_hour": {
+          "utilization": 0,
+          "resets_at": null
+        },
+        "seven_day": {
+          "utilization": 0,
+          "resets_at": "2026-09-16T14:00:00-07:00"
+        },
+        "limits": [
+          {
+            "kind": "weekly_scoped",
+            "percent": 0,
+            "resets_at": "2026-09-16T14:00:00-07:00",
+            "is_active": true,
+            "scope": {
+              "model": {
+                "id": "claude-fable-5",
+                "display_name": "Fable 5"
+              }
+            }
+          }
+        ]
+      },
+      "profile": {
+        "account": {
+          "has_claude_max": true
+        }
+      }
+    },
+    "claude-4": {
+      "usage": {
+        "five_hour": {
+          "utilization": 1,
+          "resets_at": "2026-09-11T23:50:00-07:00"
+        },
+        "seven_day": {
+          "utilization": 25,
+          "resets_at": "2026-09-12T23:00:00-07:00"
+        },
+        "limits": [
+          {
+            "kind": "weekly_scoped",
+            "percent": 49,
+            "resets_at": "2026-09-12T23:00:00-07:00",
+            "is_active": true,
+            "scope": {
+              "model": {
+                "id": "claude-fable-5",
+                "display_name": "Fable 5"
+              }
+            }
+          }
+        ]
+      },
+      "profile": {
+        "account": {
+          "has_claude_max": true
+        }
+      }
+    },
+    "claude-5": {
+      "usage": {
+        "five_hour": {
+          "utilization": 0,
+          "resets_at": null
+        },
+        "seven_day": {
+          "utilization": 0,
+          "resets_at": "2026-09-17T12:00:00-07:00"
+        },
+        "limits": [
+          {
+            "kind": "weekly_scoped",
+            "percent": 0,
+            "resets_at": "2026-09-17T12:00:00-07:00",
+            "is_active": true,
+            "scope": {
+              "model": {
+                "id": "claude-fable-5",
+                "display_name": "Fable 5"
+              }
+            }
+          }
+        ]
+      },
+      "profile": {
+        "account": {
+          "has_claude_max": true
+        }
+      }
+    },
+    "codex-1": {
+      "usage": {
+        "plan_type": "pro",
+        "rate_limit": {
+          "allowed": true,
+          "limit_reached": false,
+          "primary_window": {
+            "used_percent": 94,
+            "limit_window_seconds": 604800,
+            "reset_at": 1789435380
+          },
+          "secondary_window": null
+        },
+        "rate_limit_reset_credits": {
+          "available_count": 0,
+          "applicable_available_count": 0,
+          "credits": []
+        }
+      }
+    },
+    "codex-2": {
+      "usage": {
+        "plan_type": "pro",
+        "rate_limit": {
+          "allowed": true,
+          "limit_reached": false,
+          "primary_window": {
+            "used_percent": 95,
+            "limit_window_seconds": 604800,
+            "reset_at": 1789435380
+          },
+          "secondary_window": null
+        },
+        "rate_limit_reset_credits": {
+          "available_count": 0,
+          "applicable_available_count": 0,
+          "credits": []
+        }
+      }
+    },
+    "codex-3": {
+      "usage": {
+        "plan_type": "pro",
+        "rate_limit": {
+          "allowed": true,
+          "limit_reached": false,
+          "primary_window": {
+            "used_percent": 94,
+            "limit_window_seconds": 604800,
+            "reset_at": 1789435380
+          },
+          "secondary_window": null
+        },
+        "rate_limit_reset_credits": {
+          "available_count": 0,
+          "applicable_available_count": 0,
+          "credits": []
+        }
+      }
+    },
+    "xai-1": {
+      "billing": {
+        "config": {
+          "currentPeriod": {
+            "type": "weekly",
+            "start": "2026-09-10T17:29:00-07:00",
+            "end": "2026-09-17T17:29:00-07:00"
+          },
+          "creditUsagePercent": null,
+          "productUsage": []
+        }
+      }
+    },
+    "kimi-1": {
+      "usage": {
+        "usage": {
+          "limit": "100",
+          "used": "0",
+          "resetTime": "2026-09-17T15:56:00-07:00"
+        }
+      }
+    }
+  }
+}

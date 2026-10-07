@@ -1601,7 +1601,11 @@
     "ledger_details": "Details",
     "ledger_filters": "Search and sort",
     "ledger_observed": "Observed {{time}}",
-    "ledger_expired": "Observation expired"
+    "ledger_expired": "Observation expired",
+    "ledger_not_routing": "Quota shown; routing observation {{status}}",
+    "ledger_routing_unsupported": "unsupported",
+    "ledger_routing_unavailable": "unavailable",
+    "ledger_routing_rejected": "rejected"
   },
   "plugin_management": {
     "title": "Plugin Management",

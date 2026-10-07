@@ -128,6 +128,16 @@ function LedgerRow({
         )}
       </div>
       <div className={styles.windows}>
+        {quota?.routingObservation &&
+          !['applied', 'superseded'].includes(quota.routingObservation.status) && (
+            <p className={styles.routingNotice} role="status">
+              {t('quota_management.ledger_not_routing', {
+                status: t(`quota_management.ledger_routing_${quota.routingObservation.status}`),
+              })}
+              {quota.routingObservation.reason ? ` · ${quota.routingObservation.reason}` : ''}
+            </p>
+          )}
+
         {windows.map((window) => (
           <WindowMeter key={window.id} window={window} now={now} />
         ))}

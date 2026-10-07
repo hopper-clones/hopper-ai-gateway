@@ -1625,7 +1625,11 @@
     "ledger_details": "詳細資料",
     "ledger_filters": "搜尋和排序",
     "ledger_observed": "觀測於 {{time}}",
-    "ledger_expired": "觀測已過期"
+    "ledger_expired": "觀測已過期",
+    "ledger_not_routing": "額度已顯示；路由觀測{{status}}",
+    "ledger_routing_unsupported": "不受支援",
+    "ledger_routing_unavailable": "無法使用",
+    "ledger_routing_rejected": "遭拒絕"
   },
   "plugin_management": {
     "title": "插件管理",

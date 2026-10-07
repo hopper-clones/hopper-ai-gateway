@@ -1604,7 +1604,11 @@
     "ledger_details": "Подробности",
     "ledger_filters": "Поиск и сортировка",
     "ledger_observed": "Наблюдение: {{time}}",
-    "ledger_expired": "Наблюдение устарело"
+    "ledger_expired": "Наблюдение устарело",
+    "ledger_not_routing": "Квота показана; наблюдение маршрутизации: {{status}}",
+    "ledger_routing_unsupported": "не поддерживается",
+    "ledger_routing_unavailable": "недоступно",
+    "ledger_routing_rejected": "отклонено"
   },
   "plugin_management": {
     "title": "Управление плагинами",
