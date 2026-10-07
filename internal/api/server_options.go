@@ -11,6 +11,7 @@ import (
 	"github.com/router-for-me/CLIProxyAPI/v8/internal/pluginhost"
 	"github.com/router-for-me/CLIProxyAPI/v8/sdk/api/handlers"
 	"github.com/router-for-me/CLIProxyAPI/v8/sdk/cliproxy/auth"
+	"github.com/router-for-me/CLIProxyAPI/v8/sdk/cliproxy/usage/feed"
 )
 
 type serverOptionConfig struct {
@@ -28,6 +29,7 @@ type serverOptionConfig struct {
 	pluginHost            *pluginhost.Host
 	configReloadHook      func(context.Context, *config.Config)
 	exampleAPIKeySafeMode bool
+	usageFeed             *feed.Store
 }
 
 // ServerOption customises HTTP server construction.
@@ -139,4 +141,11 @@ func WithExampleAPIKeySafeMode() ServerOption {
 // WithLocalConsoleOpener enables native loopback console sign-in. The callback must not log its sensitive URL.
 func WithLocalConsoleOpener(open func(string) error) ServerOption {
 	return func(cfg *serverOptionConfig) { cfg.localConsoleOpener = open }
+}
+
+// WithUsageFeed serves the usage feed management endpoints from the given store.
+func WithUsageFeed(store *feed.Store) ServerOption {
+	return func(cfg *serverOptionConfig) {
+		cfg.usageFeed = store
+	}
 }
