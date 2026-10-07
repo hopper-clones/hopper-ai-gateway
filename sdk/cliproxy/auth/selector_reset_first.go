@@ -23,6 +23,9 @@ type RoutingQuotaWindow struct {
 	ResetAt   time.Time `json:"reset_at"`
 	Exhausted bool      `json:"exhausted"`
 	Stale     bool      `json:"stale"`
+	// Utilization is the provider-reported fraction of the window used (0..1),
+	// nil when the response carried no usable utilization signal.
+	Utilization *float64 `json:"utilization,omitempty"`
 }
 
 // ResetFirstSelector concentrates cold traffic on the available credential whose
@@ -109,11 +112,16 @@ func RoutingQuotaWindows(a *Auth, model string, now time.Time) []RoutingQuotaWin
 		if claude {
 			threshold = 1
 		}
-		if parseErr == nil && !math.IsNaN(utilization) && !math.IsInf(utilization, 0) && utilization >= threshold {
-			exhausted = true
+		var fraction *float64
+		if parseErr == nil && !math.IsNaN(utilization) && !math.IsInf(utilization, 0) {
+			if utilization >= threshold {
+				exhausted = true
+			}
+			used := utilization / threshold
+			fraction = &used
 		}
 		if !reset.IsZero() || exhausted {
-			windows = append(windows, RoutingQuotaWindow{scope, reset, exhausted, stale})
+			windows = append(windows, RoutingQuotaWindow{Scope: scope, ResetAt: reset, Exhausted: exhausted, Stale: stale, Utilization: fraction})
 		}
 	}
 	switch strings.ToLower(a.Provider) {

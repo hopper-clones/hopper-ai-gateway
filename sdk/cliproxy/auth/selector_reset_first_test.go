@@ -145,3 +145,30 @@ func TestResetFirstAffinityAndConcurrentPicks(t *testing.T) {
 	}
 	wg.Wait()
 }
+
+func TestRoutingQuotaWindowsCarryNormalizedUtilization(t *testing.T) {
+	now := time.Date(2026, 10, 7, 12, 0, 0, 0, time.UTC)
+	claude := &Auth{Provider: "claude", Quota: QuotaState{ObservedAt: now, Signals: map[string]string{
+		"Anthropic-Ratelimit-Unified-5h-Utilization": "0.42",
+		"Anthropic-Ratelimit-Unified-5h-Reset":       "1791817200",
+	}}}
+	windows := RoutingQuotaWindows(claude, "claude-fable-5-1", now)
+	if len(windows) != 1 || windows[0].Scope != "5h" || windows[0].Utilization == nil || *windows[0].Utilization != 0.42 {
+		t.Fatalf("claude windows = %+v", windows)
+	}
+	codex := &Auth{Provider: "codex", Quota: QuotaState{ObservedAt: now, Signals: map[string]string{
+		"X-Codex-Primary-Used-Percent": "75",
+		"X-Codex-Primary-Reset-At":     "1791817200",
+	}}}
+	windows = RoutingQuotaWindows(codex, "gpt-5", now)
+	if len(windows) != 1 || windows[0].Scope != "primary" || windows[0].Utilization == nil || *windows[0].Utilization != 0.75 {
+		t.Fatalf("codex windows = %+v", windows)
+	}
+	unknown := &Auth{Provider: "claude", Quota: QuotaState{ObservedAt: now, Signals: map[string]string{
+		"Anthropic-Ratelimit-Unified-5h-Reset": "1791817200",
+	}}}
+	windows = RoutingQuotaWindows(unknown, "claude-fable-5-1", now)
+	if len(windows) != 1 || windows[0].Utilization != nil {
+		t.Fatalf("windows without utilization = %+v", windows)
+	}
+}
