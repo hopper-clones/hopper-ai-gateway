@@ -150,7 +150,7 @@ func TestPionMediaRelayBridgesAudioAndDataChannel(t *testing.T) {
 		logger.ReplaceHooks(previousHooks)
 		logger.SetLevel(previousLevel)
 	}()
-	clientAPI := newTestWebRTCAPI(t)
+	clientAPI := newTestWebRTCAPIWithLoopback(t, true)
 	client, errClient := clientAPI.NewPeerConnection(webrtc.Configuration{})
 	if errClient != nil {
 		t.Fatalf("create client PeerConnection: %v", errClient)
@@ -195,6 +195,11 @@ func TestPionMediaRelayBridgesAudioAndDataChannel(t *testing.T) {
 	if errRelay != nil {
 		t.Fatalf("create media relay: %v", errRelay)
 	}
+	// All four peers belong to this fixture. Keep ICE candidates on loopback
+	// so VPN, bridge, and LAN interface policy cannot prevent local connectivity.
+	// Production API construction and the full media bridge assertions stay intact.
+	relay.downstreamAPI = newTestWebRTCAPIWithLoopback(t, true)
+	relay.upstreamAPI = newTestWebRTCAPIWithLoopback(t, true)
 	session, relayOffer, errSession := relay.NewSession(context.Background(), clientOffer, mediaSessionRoute{
 		credential: "Voice credential",
 		authIndex:  "auth-index",
@@ -216,7 +221,7 @@ func TestPionMediaRelayBridgesAudioAndDataChannel(t *testing.T) {
 		t.Fatal("reloaded media relay bypassed the shared session capacity")
 	}
 
-	upstreamAPI := newTestWebRTCAPI(t)
+	upstreamAPI := newTestWebRTCAPIWithLoopback(t, true)
 	upstream, errUpstream := upstreamAPI.NewPeerConnection(webrtc.Configuration{})
 	if errUpstream != nil {
 		t.Fatalf("create upstream PeerConnection: %v", errUpstream)
@@ -356,6 +361,11 @@ func offerCandidatesAreLoopback(t *testing.T, offer string) bool {
 
 func newTestWebRTCAPI(t *testing.T) *webrtc.API {
 	t.Helper()
+	return newTestWebRTCAPIWithLoopback(t, false)
+}
+
+func newTestWebRTCAPIWithLoopback(t *testing.T, loopbackOnly bool) *webrtc.API {
+	t.Helper()
 	mediaEngine := &webrtc.MediaEngine{}
 	if errRegister := mediaEngine.RegisterCodec(webrtc.RTPCodecParameters{
 		RTPCodecCapability: opusCodec,
@@ -367,9 +377,16 @@ func newTestWebRTCAPI(t *testing.T) *webrtc.API {
 	if errRegister := webrtc.RegisterDefaultInterceptors(mediaEngine, interceptorRegistry); errRegister != nil {
 		t.Fatalf("register test interceptors: %v", errRegister)
 	}
+	settings := webrtc.SettingEngine{}
+	if loopbackOnly {
+		settings.SetNetworkTypes([]webrtc.NetworkType{webrtc.NetworkTypeUDP4})
+		settings.SetIncludeLoopbackCandidate(true)
+		settings.SetIPFilter(func(ip net.IP) bool { return ip != nil && ip.IsLoopback() })
+	}
 	return webrtc.NewAPI(
 		webrtc.WithMediaEngine(mediaEngine),
 		webrtc.WithInterceptorRegistry(interceptorRegistry),
+		webrtc.WithSettingEngine(settings),
 	)
 }
 

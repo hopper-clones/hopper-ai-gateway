@@ -59,17 +59,11 @@ func SetCurrentConfig(cfg *config.Config) {
 // StartAutoUpdater launches a background goroutine that periodically ensures the management asset is up to date.
 // It respects the disable-control-panel flag on every iteration and supports hot-reloaded configurations.
 func StartAutoUpdater(ctx context.Context, configFilePath string) {
-	configFilePath = strings.TrimSpace(configFilePath)
-	if configFilePath == "" {
-		log.Debug("management asset auto-updater skipped: empty config path")
-		return
-	}
-
-	schedulerConfigPath.Store(configFilePath)
-
-	schedulerOnce.Do(func() {
-		go runAutoUpdater(ctx)
-	})
+	// This fork ships its console with the gateway; upstream asset updates would
+	// replace the UI with a different product. Keep the downloader available to
+	// SDK consumers, but never schedule it for this gateway.
+	_ = ctx
+	_ = configFilePath
 }
 
 func runAutoUpdater(ctx context.Context) {

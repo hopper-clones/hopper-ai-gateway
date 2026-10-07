@@ -3,7 +3,8 @@
 Go 1.26+ proxy server providing OpenAI/Gemini/Claude/Codex compatible APIs with OAuth and round-robin load balancing.
 
 ## Repository
-- GitHub: https://github.com/router-for-me/CLIProxyAPI
+- GitHub: https://github.com/hopper-clones/hopper-ai-gateway
+- Upstream: https://github.com/router-for-me/CLIProxyAPI
 
 ## Commands
 ```bash
@@ -21,6 +22,13 @@ go build -o test-output ./cmd/server && rm test-output # Verify compile (REQUIRE
 - `.env` is auto-loaded from the working directory
 - Auth material defaults under `auths/`
 - Storage backends: file-based default; optional Postgres/git/object store (`PGSTORE_*`, `GITSTORE_*`, `OBJECTSTORE_*`)
+
+## Fork console
+- `web/management/` is the vendored upstream management frontend; its guidance applies there.
+- `make console` rebuilds the single console and packages the compressed Go embed.
+- `make build` packages the console and builds the gateway; `make verify` runs frontend and Go checks.
+- Serve only the bundled `/management.html` console; do not add a second gateway app or fetch an upstream replacement.
+- Preserve source provenance in `docs/THEO-REFACTOR.md`; test replay is synthetic and never production credential data.
 
 ## Architecture
 - `cmd/server/` — Server entrypoint
