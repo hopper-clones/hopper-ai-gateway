@@ -2,21 +2,36 @@ package management
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
-	"net"
+	"errors"
 	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
+	"golang.org/x/sync/singleflight"
 )
+
+// capacityBridgeTimeout bounds the Capacity reader child process. It is a local
+// child process deadline, not an upstream network timeout. Tests shorten it.
+var capacityBridgeTimeout = 20 * time.Second
+
+// capacityFlight lets concurrent snapshot requests share one reader run.
+var capacityFlight singleflight.Group
+
+type capacityRun struct {
+	status int
+	body   []byte
+}
 
 // GetCapacitySnapshot reads the explicitly configured public Capacity owner surface.
 // Register only behind management authentication. The actual peer must be local.
 func (h *Handler) GetCapacitySnapshot(c *gin.Context) {
-	peer, _, err := net.SplitHostPort(c.Request.RemoteAddr)
-	if err != nil || net.ParseIP(peer) == nil || !net.ParseIP(peer).IsLoopback() {
+	if !loopbackPeer(c) {
 		c.JSON(http.StatusForbidden, gin.H{"code": "CAPACITY_LOCAL_ONLY"})
 		return
 	}
@@ -27,17 +42,38 @@ func (h *Handler) GetCapacitySnapshot(c *gin.Context) {
 	}
 	bun := os.Getenv("HOPPER_AI_CAPACITY_BUN")
 	if bun == "" {
-		bun, err = exec.LookPath("bun")
+		var err error
+		if bun, err = exec.LookPath("bun"); err != nil || bun == "" {
+			c.JSON(http.StatusServiceUnavailable, gin.H{"code": "CAPACITY_READER_UNAVAILABLE"})
+			return
+		}
 	}
-	if err != nil || bun == "" {
-		c.JSON(http.StatusServiceUnavailable, gin.H{"code": "CAPACITY_READER_UNAVAILABLE"})
+	result, _, _ := capacityFlight.Do("snapshot", func() (any, error) {
+		return runCapacityReader(bun, script), nil
+	})
+	run, ok := result.(capacityRun)
+	if !ok {
+		c.JSON(http.StatusServiceUnavailable, gin.H{"code": "CAPACITY_OWNER_UNAVAILABLE"})
 		return
 	}
-	cmd := exec.CommandContext(c.Request.Context(), bun, script)
-	cmd.Env = append(os.Environ(), "HOPPER_CAPACITY_ACCOUNT_DISCOVERY=off")
+	c.Header("Cache-Control", "no-store")
+	c.Data(run.status, "application/json", run.body)
+}
+
+// runCapacityReader executes the reader once with a scrubbed environment and a
+// deadline, and maps its outcome to the HTTP response shared by all waiters.
+func runCapacityReader(bun, script string) capacityRun {
+	ctx, cancel := context.WithTimeout(context.Background(), capacityBridgeTimeout)
+	defer cancel()
+	cmd := exec.CommandContext(ctx, bun, script)
+	cmd.Env = capacityEnv(os.Environ())
+	cmd.WaitDelay = time.Second
 	var output, diagnostic bytes.Buffer
 	cmd.Stdout, cmd.Stderr = &output, &diagnostic
 	if err := cmd.Run(); err != nil {
+		if errors.Is(ctx.Err(), context.DeadlineExceeded) {
+			return capacityJSON(http.StatusGatewayTimeout, "CAPACITY_TIMEOUT")
+		}
 		code := "CAPACITY_OWNER_UNAVAILABLE"
 		var failure struct {
 			Code string `json:"code"`
@@ -48,17 +84,36 @@ func (h *Handler) GetCapacitySnapshot(c *gin.Context) {
 				code = failure.Code
 			}
 		}
-		c.JSON(http.StatusServiceUnavailable, gin.H{"code": code})
-		return
+		return capacityJSON(http.StatusServiceUnavailable, code)
 	}
 	var result struct {
 		SchemaVersion string            `json:"schemaVersion"`
 		Accounts      []json.RawMessage `json:"accounts"`
 	}
 	if json.Unmarshal(output.Bytes(), &result) != nil || result.SchemaVersion != "hopper.gateway-capacity.v1" || result.Accounts == nil {
-		c.JSON(http.StatusBadGateway, gin.H{"code": "CAPACITY_INVALID_RESPONSE"})
-		return
+		return capacityJSON(http.StatusBadGateway, "CAPACITY_INVALID_RESPONSE")
 	}
-	c.Header("Cache-Control", "no-store")
-	c.Data(http.StatusOK, "application/json", output.Bytes())
+	return capacityRun{status: http.StatusOK, body: output.Bytes()}
+}
+
+func capacityJSON(status int, code string) capacityRun {
+	body, _ := json.Marshal(gin.H{"code": code})
+	return capacityRun{status: status, body: body}
+}
+
+// capacityEnv keeps only PATH, HOME and the HOPPER_AI_CAPACITY_* selection, and
+// pins account discovery off. Nothing else from the gateway's environment reaches
+// the reader.
+func capacityEnv(environ []string) []string {
+	env := make([]string, 0, 8)
+	for _, entry := range environ {
+		name, _, found := strings.Cut(entry, "=")
+		if !found {
+			continue
+		}
+		if name == "PATH" || name == "HOME" || strings.HasPrefix(name, "HOPPER_AI_CAPACITY_") {
+			env = append(env, entry)
+		}
+	}
+	return append(env, "HOPPER_CAPACITY_ACCOUNT_DISCOVERY=off")
 }
