@@ -14,7 +14,11 @@ tokens once this feed is live.
   feed; if the queue is full the event is dropped, counted and warned.
 - `usage-feed/cursors.json` holds each consumer's acked cursor (atomic rename).
 - Retention: hourly files older than 30 days are deleted only when every consumer's
-  acked cursor is past them. With no consumer acked at all nothing is deleted.
+  acked cursor is past them. With no consumer acked at all nothing is deleted. One
+  stalled consumer therefore holds retention for everyone; drop it with
+  `DELETE /v8/management/usage/feed/cursors/<consumer>` once it is known to be dead.
+- An ack is refused when its cursor moves backwards for that consumer or names a
+  file that does not exist; re-acking the same cursor is fine.
 - Changing `usage-feed` in the config requires a restart.
 
 ## Events
@@ -41,6 +45,11 @@ Quota, one per quota window observed on the response headers (Claude `5h`, `7d`,
 Rules:
 
 - `cached_input` is already inside `input`; `reasoning` is already inside `output`. Never add them again.
+- Tokens are normalized from the gateway's token-accounting breakdown, not copied from
+  provider counters: `input = uncached + cache_read + cache_write`, `output = non_reasoning +
+  reasoning`, `total = input + output`, for every provider (Anthropic's `input_tokens`
+  excludes cache reads, OpenAI's `prompt_tokens` includes them). An event whose breakdown
+  cannot satisfy this is dropped and counted; its quota events are still written.
 - `lane`, `project`, `task` come from the lane key that authenticated the request;
   plain `access.api-keys` give empty strings.
 - `account_hash` is the only account identity that leaves the gateway. No email is in the feed.
@@ -59,6 +68,7 @@ socket peer must be loopback (forwarded headers do not count), exactly like
 | `/usage/feed` | GET | `cursor=` (omit to start at the oldest retained file), `limit=` (default 500, max 5000) | `{"events":[…],"next_cursor":"<file>:<offset>","has_more":bool}` |
 | `/usage/feed/ack` | POST | `{"consumer":"capacity","cursor":"…"}` | `{"status":"ok", …}`; persisted to `cursors.json` |
 | `/usage/feed/cursors` | GET | | `{"cursors":{"capacity":{"cursor":"…","acked_at":"…"}}}` |
+| `/usage/feed/cursors/:consumer` | DELETE | | `{"status":"ok"}` or 404; the consumer no longer holds retention |
 | `/lane-keys` | POST | `{"lane","project","task","ttl_seconds"}` (lane required; default 8 h, max 30 d) | `201 {"id","key","expires_at",…}` — the key is returned once |
 | `/lane-keys` | GET | | `{"lane_keys":[{"id","key_id","lane","project","task","expires_at"}]}` — never the key |
 | `/lane-keys/:id` | DELETE | | `{"status":"ok"}` or 404 |
@@ -68,8 +78,9 @@ The cursor is opaque: `"<file>:<byte offset>"`. A reader that stops on a partial
 written last line gets the same cursor back and continues once the line is complete.
 A cursor naming a retired file resumes at the next retained file.
 
-`/routing/pick` runs the manager's selection path for the model (the configured
-selector, reset-first by default) without executing anything. `reason` is
+`/routing/pick` runs the manager's read-only selection path (`PeekAuth`) for the
+model: the configured selector answers without advancing round-robin state,
+spending weighted credits or binding a session, and nothing is executed. `reason` is
 `earliest-reset` when the chosen credential has a fresh, unexhausted window with a
 future reset, otherwise `stable-order`. `lane` is echoed for the caller's trace;
 selection is lane-agnostic.

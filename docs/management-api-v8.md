@@ -98,6 +98,7 @@ retain the corresponding business operation's fields.
 | `/usage/feed` | GET | Read the usage feed from a cursor (loopback only). |
 | `/usage/feed/ack` | POST | Persist a consumer's acked cursor. |
 | `/usage/feed/cursors` | GET | List acked cursors. |
+| `/usage/feed/cursors/<consumer>` | DELETE | Drop a consumer's cursor so it no longer holds retention. |
 | `/observability/logs` | GET, DELETE | Read or clear application logs. |
 | `/observability/logs/errors` | GET | List error-log files. |
 | `/observability/logs/errors/<name>` | GET | Download an error-log file. |
