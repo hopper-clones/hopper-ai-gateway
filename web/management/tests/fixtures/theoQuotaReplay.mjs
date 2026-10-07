@@ -5,9 +5,10 @@ export async function installTheoQuotaReplay(context) {
   const fixture = JSON.parse(readFileSync(new URL('./theo-quota-replay.json', import.meta.url), 'utf8'));
   await context.addInitScript(({ clock }) => {
     const NativeDate = Date;
+    const referenceOffset = clock - NativeDate.now();
     class FixtureDate extends NativeDate {
-      constructor(...args) { super(...(args.length ? args : [clock])); }
-      static now() { return clock; }
+      constructor(...args) { super(...(args.length ? args : [NativeDate.now() + referenceOffset])); }
+      static now() { return NativeDate.now() + referenceOffset; }
     }
     globalThis.Date = FixtureDate;
   }, { clock: Date.parse(fixture.clock) });
