@@ -207,9 +207,9 @@ export function LoginPage() {
       {/* Brand panel */}
       <div className={styles.brandPanel}>
         <div className={styles.brandContent}>
-          <span className={styles.brandWord}>CLI</span>
-          <span className={styles.brandWord}>PROXY</span>
-          <span className={styles.brandWord}>API</span>
+          <span className={styles.brandWord}>HOPPER</span>
+          <span className={styles.brandWord}>AI</span>
+          <span className={styles.brandWord}>GATEWAY</span>
         </div>
       </div>
 
@@ -218,7 +218,7 @@ export function LoginPage() {
         {showSplash ? (
           /* Session restoration */
           <div className={styles.splashContent}>
-            <img src={INLINE_LOGO_JPEG} alt="CPAMC" className={styles.splashLogo} />
+            <img src={INLINE_LOGO_JPEG} alt="Hopper AI Gateway" className={styles.splashLogo} />
             <h1 className={styles.splashTitle}>{t('splash.title')}</h1>
             <p className={styles.splashSubtitle}>{t('splash.subtitle')}</p>
             <div className={styles.splashLoader}>
@@ -229,7 +229,7 @@ export function LoginPage() {
           /* Sign-in form */
           <div className={styles.formContent}>
             {/* Logo */}
-            <img src={INLINE_LOGO_JPEG} alt="Logo" className={styles.logo} />
+            <img src={INLINE_LOGO_JPEG} alt="Hopper AI Gateway" className={styles.logo} />
 
             {/* Sign-in card */}
             <div className={styles.loginCard}>

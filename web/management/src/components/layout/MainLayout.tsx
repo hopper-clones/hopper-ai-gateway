@@ -1152,7 +1152,7 @@ export function MainLayout() {
         >
           <div className="sidebar-header">
             <div className="sidebar-brand" title={fullBrandName}>
-              <img src={INLINE_LOGO_JPEG} alt="CPAMC logo" className="sidebar-brand-logo" />
+              <img src={INLINE_LOGO_JPEG} alt="Hopper AI Gateway logo" className="sidebar-brand-logo" />
               {showSidebarLabels && (
                 <span className="sidebar-brand-text">
                   <span className="sidebar-brand-title">{abbrBrandName}</span>

@@ -158,7 +158,7 @@ func BuildServiceSpec(cfg *config.Config, port int, tlsEnabled bool) (ServiceSpe
 	stateDir := ResolveDiscoveryStateDir()
 	instanceID := GetOrGenerateInstanceID(stateDir)
 
-	// 2. Format instance name (CPA-<ShortID> or <custom>-<ShortID>) within DNS label limits
+	// 2. Format instance name (Hopper AI Gateway-<ShortID> or <custom>-<ShortID>) within DNS label limits
 	instanceName := FormatInstanceName(discCfg.ServiceName, instanceID)
 	if instanceName == "" {
 		instanceName = DefaultInstancePrefix + instanceID

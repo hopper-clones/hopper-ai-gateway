@@ -38,7 +38,7 @@
     "alias": "别名",
     "failure": "失败",
     "unknown_error": "未知错误",
-    "quota_update_required": "请更新 CPA 版本或检查更新",
+    "quota_update_required": "请更新 Hopper AI Gateway 版本或检查更新",
     "quota_check_credential": "请检查凭证状态",
     "copy": "复制",
     "expand": "展开",
@@ -57,15 +57,15 @@
     "unsaved_changes_message": "你有未保存的更改，离开后将丢失这些更改。确定要离开吗？"
   },
   "title": {
-    "login": "CLI Proxy API Management Center",
-    "abbr": "CPAMC"
+    "login": "Hopper AI Gateway Management Center",
+    "abbr": "Hopper AI Gateway"
   },
   "splash": {
-    "title": "CLI Proxy API",
+    "title": "Hopper AI Gateway",
     "subtitle": "管理中心"
   },
   "login": {
-    "subtitle": "连接 CLI Proxy API v8 或更高版本",
+    "subtitle": "连接 Hopper AI Gateway v8 或更高版本",
     "connection_current": "当前地址",
     "connection_auto_hint": "系统将自动使用当前访问地址进行连接",
     "custom_connection_label": "自定义连接地址:",
@@ -83,8 +83,8 @@
     "error_timeout": "连接超时，服务器无响应",
     "error_unauthorized": "认证失败，管理密钥缺失或无效",
     "error_forbidden": "访问被拒绝，远程管理未启用、管理密钥未配置或 IP 被临时封禁",
-    "error_not_found": "未找到 v8 Management API，请检查服务地址并将 CLIProxyAPI 升级至 v8 或更高版本；不再支持 v0 接口。",
-    "error_legacy_backend": "当前后端可使用 v0 管理接口，但不支持 v8。请将 CLIProxyAPI 升级至 v8 或更高版本后再使用此管理页面。",
+    "error_not_found": "未找到 v8 Management API，请检查服务地址并将 Hopper AI Gateway 升级至 v8 或更高版本；不再支持 v0 接口。",
+    "error_legacy_backend": "当前后端可使用 v0 管理接口，但不支持 v8。请将 Hopper AI Gateway 升级至 v8 或更高版本后再使用此管理页面。",
     "error_server": "后端处理管理接口时发生错误，请查看服务日志",
     "error_cors": "跨域请求被阻止，请检查服务器配置",
     "error_ssl": "SSL/TLS 证书验证失败"
@@ -353,7 +353,7 @@
     "models_empty": "该凭证暂无可用模型",
     "models_empty_desc": "该认证凭证可能尚未被服务器加载或没有绑定任何模型",
     "models_unsupported": "当前版本不支持此功能",
-    "models_unsupported_desc": "请更新 CLI Proxy API 到最新版本后重试",
+    "models_unsupported_desc": "请更新 Hopper AI Gateway 到最新版本后重试",
     "models_excluded_badge": "已禁用",
     "models_excluded_hint": "此 OAuth 模型已被禁用",
     "status_toggle_label": "启用",
@@ -674,9 +674,9 @@
     "model_count": "禁用 {{count}} 个模型",
     "list_empty_all": "暂无任何提供商的模型禁用，点击“新增禁用”创建。",
     "provider_required": "请先填写提供商名称",
-    "upgrade_required": "当前 CPA 版本不支持 OAuth 模型禁用，请升级 CPA 版本",
-    "upgrade_required_title": "需要升级 CPA 版本",
-    "upgrade_required_desc": "当前服务器版本不支持获取 OAuth 模型禁用功能，请升级到最新版本的 CPA（CLI Proxy API）后重试。"
+    "upgrade_required": "当前 Hopper AI Gateway 版本不支持 OAuth 模型禁用，请升级 Hopper AI Gateway 版本",
+    "upgrade_required_title": "需要升级 Hopper AI Gateway 版本",
+    "upgrade_required_desc": "当前服务器版本不支持获取 OAuth 模型禁用功能，请升级到最新版本的 Hopper AI Gateway后重试。"
   },
   "excluded_models": {
     "trigger_summary": "已排除 {{excluded}} · {{available}} 可用",
@@ -723,7 +723,7 @@
     "provider_placeholder": "例如 codex / vertex",
     "provider_hint": "默认选中当前筛选的提供商，也可直接输入或选择其他名称。",
     "model_source_loading": "正在加载模型列表...",
-    "model_source_unsupported": "当前 CPA 版本不支持获取模型列表（仍可手动输入）。",
+    "model_source_unsupported": "当前 Hopper AI Gateway 版本不支持获取模型列表（仍可手动输入）。",
     "model_source_loaded": "已加载 {{count}} 个模型，可在“原模型名称”中下拉选择；也可手动输入。留空保存将删除该提供商记录；开启“保留原名”会在保留原模型名的同时新增别名。",
     "alias_label": "模型别名",
     "alias_name_placeholder": "原模型名称",
@@ -773,9 +773,9 @@
     "view_mode_diagram": "概览",
     "view_mode_list": "管理",
     "provider_required": "请先填写提供商名称",
-    "upgrade_required": "当前 CPA 版本不支持模型别名功能，请升级 CPA 版本",
-    "upgrade_required_title": "需要升级 CPA 版本",
-    "upgrade_required_desc": "当前服务器版本不支持 OAuth 模型别名功能，请升级到最新版本的 CPA（CLI Proxy API）后重试。"
+    "upgrade_required": "当前 Hopper AI Gateway 版本不支持模型别名功能，请升级 Hopper AI Gateway 版本",
+    "upgrade_required_title": "需要升级 Hopper AI Gateway 版本",
+    "upgrade_required_desc": "当前服务器版本不支持 OAuth 模型别名功能，请升级到最新版本的 Hopper AI Gateway后重试。"
   },
   "auth_login": {
     "devin_oauth_cancel": "取消 Devin 登录",
@@ -784,7 +784,7 @@
     "devin_oauth_retry_hint": "服务器可能仍在等待授权。请先取消本次登录，再重新开始。",
     "devin_oauth_title": "Devin OAuth",
     "devin_oauth_button": "开始 Devin 登录",
-    "devin_oauth_hint": "通过浏览器 OAuth 登录 Devin / Cognition，自动保存认证文件。需要 CLI Proxy API v7.3.1 或更高版本，请在五分钟内完成授权。",
+    "devin_oauth_hint": "通过浏览器 OAuth 登录 Devin / Cognition，自动保存认证文件。需要 Hopper AI Gateway v7.3.1 或更高版本，请在五分钟内完成授权。",
     "devin_oauth_url_label": "授权链接：",
     "devin_copy_link": "复制链接",
     "devin_open_link": "打开链接",
@@ -902,7 +902,7 @@
     "oauth_callback_required": "请先粘贴完整的回调 URL。",
     "oauth_callback_success": "回调 URL 已提交，请继续等待认证。",
     "oauth_callback_error": "提交回调 URL 失败:",
-    "oauth_callback_upgrade_hint": "请更新CLI Proxy API或检查连接",
+    "oauth_callback_upgrade_hint": "请更新Hopper AI Gateway或检查连接",
     "oauth_callback_status_success": "回调 URL 已提交，等待认证中...",
     "oauth_callback_status_error": "回调 URL 提交失败:",
     "missing_state": "无法获取认证状态参数",
@@ -976,9 +976,9 @@
     "request_log_download_success": "报文下载成功",
     "empty_title": "暂无日志记录",
     "empty_desc": "当启用\"日志记录到文件\"功能后，日志将显示在这里",
-    "cpa_file_logging_required": "当前连接的是 CPA，日志查看需要先开启“日志记录到文件”。",
+    "cpa_file_logging_required": "当前连接的是 Hopper AI Gateway，日志查看需要先开启“日志记录到文件”。",
     "cpa_file_logging_required_title": "需要开启文件日志",
-    "cpa_file_logging_required_desc": "CPA 的日志接口读取本地日志文件。请在配置中开启 logging-to-file 后再刷新查看。",
+    "cpa_file_logging_required_desc": "Hopper AI Gateway 的日志接口读取本地日志文件。请在配置中开启 logging-to-file 后再刷新查看。",
     "file_logging_required": "当前日志接口需要先开启“日志记录到文件”后才能读取文件日志。",
     "file_logging_required_title": "需要开启文件日志",
     "file_logging_required_desc": "当前日志接口读取本地日志文件。请在配置中开启 logging-to-file 后再刷新查看。",
@@ -1083,7 +1083,7 @@
         },
         "discoveryServiceName": {
           "label": "服务名称前缀",
-          "hint": "后端自动追加短 ID，留空使用 CPA-<ShortID>。"
+          "hint": "后端自动追加短 ID，留空使用 Hopper AI Gateway-<ShortID>。"
         },
         "discoveryServiceType": {
           "label": "服务类型",
@@ -1298,7 +1298,7 @@
           "plugin_store_sources": "第三方插件源",
           "plugin_store_sources_desc": "追加插件商店 registry 源；内置官方源始终保留",
           "plugin_store_sources_label": "插件源 registry URL (plugins.store-sources)",
-          "plugin_store_sources_placeholder": "https://example.com/cliproxy-plugins/registry.json",
+          "plugin_store_sources_placeholder": "https://example.com/hopper-ai-gateway-plugins/registry.json",
           "plugin_store_sources_hint": "每行一个 registry.json URL，保存时会过滤空行",
           "plugin_store_auth": "插件商店认证规则",
           "plugin_store_auth_desc": "为私有 registry、GitHub Release 元数据或下载地址配置认证头",
@@ -1674,7 +1674,7 @@
     "description_show_more": "展开描述",
     "description_show_less": "收起描述",
     "source_name": "来源：{{source}}",
-    "cli_proxy_api_source": "CLIProxyAPI源",
+    "cli_proxy_api_source": "默认插件注册表",
     "refresh": "刷新",
     "retry": "重试",
     "load_failed": "插件商店加载失败",
@@ -1776,7 +1776,7 @@
   },
   "system_info": {
     "title": "管理中心信息",
-    "about_title": "CLI Proxy API Management Center",
+    "about_title": "Hopper AI Gateway Management Center",
     "models_title": "可用模型列表",
     "models_desc": "展示 /models 返回的模型，并自动使用服务器保存的 API Key 进行鉴权。",
     "models_loading": "正在加载可用模型...",
@@ -1792,7 +1792,7 @@
     "quick_links_title": "快捷链接",
     "quick_links_desc": "访问项目仓库和文档，获取帮助和更新。",
     "link_main_repo": "主程序仓库",
-    "link_main_repo_desc": "CLI Proxy API 核心程序源代码",
+    "link_main_repo_desc": "Hopper AI Gateway 核心程序源代码",
     "link_webui_repo": "WebUI 仓库",
     "link_webui_repo_desc": "管理中心前端界面源代码",
     "link_docs": "使用教程",
@@ -1844,11 +1844,11 @@
     "toggle_collapse": "收起侧边栏",
     "expand": "展开",
     "collapse": "收起",
-    "subtitle": "CLI Proxy API 管理控制台",
+    "subtitle": "管理控制台",
     "auth_files_count": "认证文件：{{count}} 个"
   },
   "footer": {
-    "api_version": "CLI Proxy API 版本",
+    "api_version": "Hopper AI Gateway 版本",
     "build_date": "构建时间",
     "version": "管理中心版本"
   },

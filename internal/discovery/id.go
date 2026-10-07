@@ -12,7 +12,7 @@ import (
 
 const (
 	// DefaultInstancePrefix is the prefix used for default instance names.
-	DefaultInstancePrefix = "CPA-"
+	DefaultInstancePrefix = "Hopper AI Gateway-"
 	instanceIDFilename    = "instance_id"
 )
 
@@ -100,7 +100,7 @@ func ResetCachedInstanceID() {
 
 // FormatInstanceName returns a DNS-SD instance name that always includes the
 // persistent short ID, so LAN advertisements stay unique without a startup browse.
-// An empty custom name becomes CPA-<ShortID>; a custom name becomes <name>-<ShortID>.
+// An empty custom name becomes Hopper AI Gateway-<ShortID>; a custom name becomes <name>-<ShortID>.
 func FormatInstanceName(customName, instanceID string) string {
 	if !isValidHex4(instanceID) {
 		instanceID = "0001"

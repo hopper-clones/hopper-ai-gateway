@@ -1,0 +1,55 @@
+{
+  "recorded_at": "2026-10-07T11:08:31.224660+00:00",
+  "product_name": "Hopper AI Gateway",
+  "console_manifest": {
+    "source_sha256": "1e4495747b0cb79a5bafdf3feba11e33539c3017f8b4e1df663686d3cadad2ab",
+    "html_sha256": "a32b389be6cd281112ce1de26c89d184a19aec6965d9ce2b5302d7d55155de46",
+    "html_bytes": 3138314
+  },
+  "checks": {
+    "frontend": "1510 tests,0fail, ESLint, TypeScript and singlefile build PASS",
+    "backend": "complete go test ./... and server build PASS",
+    "browser": "10 routes,57 synthetic provider GETs,0JSerrors; browser title and owned UI branding checked",
+    "login_and_sidebar": "real API at1440px/390px; full name fits, no login overflow, zero connected credentials",
+    "served_artifact": "HTML hash matches bundled manifest"
+  },
+  "historical_reference_evidence": "Previous Theo/studio captures predate this requested product rename and remain retained unchanged. Third-party plugin names, descriptions and protocol identities retain their actual source identities.",
+  "artifacts": {
+    "branding-1976-quota-replay.png": {
+      "sha256": "8dd686316431f6200ce012211ae79c4bb5c7f880346b8042faad452cfbd3e19f",
+      "bytes": 229174
+    },
+    "branding-browser-journey.json": {
+      "sha256": "500a020a313ef7d97b2c9edaab744e467c5fdab48e6706e296d5e9a0120fa3e6",
+      "bytes": 10274
+    },
+    "branding-live-sidebar-1440.png": {
+      "sha256": "9916041d0840309d1798744f958987ea86ba37549e447503db7dd85b05f1e5ef",
+      "bytes": 94376
+    },
+    "branding-live-sidebar-mobile.png": {
+      "sha256": "49cd0d2f66fff1f91e11c7a53e4124d1b40fb54fd2b817d0635a845c046e4378",
+      "bytes": 42811
+    },
+    "branding-login-1440.png": {
+      "sha256": "c37e044b5bb790e9de12ffd9399a6716b0191f1b80f7483fde699f84c1a4fb30",
+      "bytes": 76365
+    },
+    "branding-login-mobile.png": {
+      "sha256": "9a2059fa2d95a16ab5a6853164ccaaca66e1aa3d1b747c50e17c2e03779f0183",
+      "bytes": 49068
+    },
+    "branding-login-sidebar-proof.json": {
+      "sha256": "9a0ed541edd14b183f97bbf506e6dce7c8f3ca59aaaa8d5b430283e60cde2bef",
+      "bytes": 398
+    },
+    "branding-mobile-quota.png": {
+      "sha256": "919fe04bcaec80af6da7441bd462d5de96a0fc1e17d1df7917b3bf70472497dc",
+      "bytes": 55832
+    },
+    "branding-quick-start.png": {
+      "sha256": "ea750b360011c738f11ffca809befef8c9cce01aa0c6b23a60c9301918f8473d",
+      "bytes": 195845
+    }
+  }
+}

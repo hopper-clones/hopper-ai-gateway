@@ -356,7 +356,7 @@ const loginSuccessHTML = `<!DOCTYPE html>
 <body>
     <div class="card">
         <h2>Authentication Complete</h2>
-        <p>You have successfully logged in to Devin via CLIProxyAPI.</p>
+        <p>You have successfully logged in to Devin via Hopper AI Gateway.</p>
         <p>You may safely close this window and return to your terminal.</p>
     </div>
 </body>

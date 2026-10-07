@@ -152,7 +152,7 @@ export const PluginStoreAuthEditor = memo(function PluginStoreAuthEditor({
                 <input
                   className="input"
                   value={rule.tokenEnv}
-                  placeholder="CLIPROXY_PLUGIN_STORE_TOKEN"
+                  placeholder="HOPPER_AI_GATEWAY_PLUGIN_STORE_TOKEN"
                   disabled={disabled}
                   onChange={(event) => updateRule(rule.id, { tokenEnv: event.target.value })}
                 />

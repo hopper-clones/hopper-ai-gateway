@@ -1,4 +1,4 @@
-// Package main provides the entry point for the CLI Proxy API server.
+// Package main provides the entry point for the Hopper AI Gateway server.
 // This server acts as a proxy that provides OpenAI/Gemini/Claude compatible API interfaces
 // for CLI models, allowing CLI models to be used with tools and libraries designed for standard AI APIs.
 package main
@@ -82,7 +82,7 @@ func main() {
 		discoverFlags.Func("exclude", "Comma-separated interface names to skip", appendCSV(&exclude))
 		_ = discoverFlags.Parse(os.Args[2:])
 		if !*jsonOut {
-			fmt.Fprintf(os.Stderr, "CLIProxyAPI Version: %s, Commit: %s, BuiltAt: %s\n", buildinfo.Version, buildinfo.Commit, buildinfo.BuildDate)
+			fmt.Fprintf(os.Stderr, "Hopper AI Gateway Version: %s, Commit: %s, BuiltAt: %s\n", buildinfo.Version, buildinfo.Commit, buildinfo.BuildDate)
 		}
 		cfgInclude, cfgExclude := cmd.LoadDiscoveryScanFilters(*configPathFlag)
 		include, exclude = cmd.ResolveDiscoveryInterfaceFilters(include, exclude, cfgInclude, cfgExclude)
@@ -100,7 +100,7 @@ func main() {
 	isJSONDiscover := argvEnablesBoolFlag(os.Args[1:], "discover-json")
 	isDiscoverMode := isJSONDiscover || argvEnablesBoolFlag(os.Args[1:], "discover")
 	if !isJSONDiscover {
-		fmt.Printf("CLIProxyAPI Version: %s, Commit: %s, BuiltAt: %s\n", buildinfo.Version, buildinfo.Commit, buildinfo.BuildDate)
+		fmt.Printf("Hopper AI Gateway Version: %s, Commit: %s, BuiltAt: %s\n", buildinfo.Version, buildinfo.Commit, buildinfo.BuildDate)
 	}
 
 	// Command-line flags to control the application's behavior.
@@ -144,7 +144,7 @@ func main() {
 	flag.BoolVar(&xaiLogin, "xai-login", false, "Login to xAI using OAuth")
 	flag.BoolVar(&devinLogin, "devin-login", false, "Login to Devin using OAuth")
 	flag.BoolVar(&metaLogin, "meta-login", false, "Login to Meta using OAuth")
-	flag.BoolVar(&discoverGateways, "discover", false, "Discover local AI gateways and CPA instances on the LAN")
+	flag.BoolVar(&discoverGateways, "discover", false, "Discover local AI gateways and Hopper AI Gateway instances on the LAN")
 	flag.IntVar(&discoverTimeout, "discover-timeout", 3, "Timeout in seconds for LAN discovery (default 3s)")
 	flag.BoolVar(&discoverJSON, "discover-json", false, "Output discovered gateways in JSON format")
 	flag.StringVar(&discoverServiceType, "discover-service-type", "", "DNS-SD service type for LAN discovery (default _ai-gateway._tcp)")
@@ -635,7 +635,7 @@ func main() {
 		return
 	}
 
-	log.Infof("CLIProxyAPI Version: %s, Commit: %s, BuiltAt: %s", buildinfo.Version, buildinfo.Commit, buildinfo.BuildDate)
+	log.Infof("Hopper AI Gateway Version: %s, Commit: %s, BuiltAt: %s", buildinfo.Version, buildinfo.Commit, buildinfo.BuildDate)
 
 	// Set the log level based on the configuration.
 	util.SetLogLevel(cfg)

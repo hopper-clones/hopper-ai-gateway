@@ -1,0 +1,19 @@
+{
+  "passed": true,
+  "tab_title": "Hopper AI Gateway",
+  "login_overflow": {
+    "page": false,
+    "word": false
+  },
+  "desktop_sidebar": {
+    "text": "Hopper AI Gateway",
+    "width": 123,
+    "scrollWidth": 123
+  },
+  "mobile_sidebar": {
+    "text": "Hopper AI Gateway",
+    "width": 144,
+    "scrollWidth": 144
+  },
+  "basis": "real API without provider replay, zero connected credentials"
+}

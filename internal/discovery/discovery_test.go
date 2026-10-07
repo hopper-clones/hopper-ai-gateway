@@ -40,7 +40,7 @@ func TestInstanceID_PersistenceAndFormat(t *testing.T) {
 
 	// 3. Format instance name with default
 	name1 := FormatInstanceName("", id1)
-	expectedName := "CPA-" + id1
+	expectedName := "Hopper AI Gateway-" + id1
 	if name1 != expectedName {
 		t.Errorf("expected %s, got %s", expectedName, name1)
 	}
@@ -85,8 +85,8 @@ func TestInstanceID_PersistenceAndFormat(t *testing.T) {
 }
 
 func TestFormatInstanceNameAlwaysIncludesID(t *testing.T) {
-	if got := FormatInstanceName("", "8F3B"); got != "CPA-8F3B" {
-		t.Fatalf("default name = %q, want CPA-8F3B", got)
+	if got := FormatInstanceName("", "8F3B"); got != "Hopper AI Gateway-8F3B" {
+		t.Fatalf("default name = %q, want Hopper AI Gateway-8F3B", got)
 	}
 	if got := FormatInstanceName("office", "8F3B"); got != "office-8F3B" {
 		t.Fatalf("custom name = %q, want office-8F3B", got)
@@ -95,7 +95,7 @@ func TestFormatInstanceNameAlwaysIncludesID(t *testing.T) {
 		t.Fatalf("already-suffixed name = %q, want office-8F3B", got)
 	}
 	if got := FormatInstanceName("CPA-8F3B", "8F3B"); got != "CPA-8F3B" {
-		t.Fatalf("default-form custom name = %q, want CPA-8F3B", got)
+		t.Fatalf("legacy custom name = %q, want CPA-8F3B", got)
 	}
 	long := strings.Repeat("n", 70)
 	got := FormatInstanceName(long, "8F3B")

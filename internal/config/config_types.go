@@ -296,7 +296,7 @@ type DiscoveryConfig struct {
 	// Enabled toggles mDNS service advertising on the local network (default: false).
 	Enabled bool `yaml:"enabled" json:"enabled"`
 
-	// ServiceName is the optional custom instance name. When empty, defaults to CPA-<ShortID>.
+	// ServiceName is the optional custom instance name. When empty, defaults to Hopper AI Gateway-<ShortID>.
 	ServiceName string `yaml:"service-name" json:"service-name"`
 
 	// ServiceType is the DNS-SD service type (default: _ai-gateway._tcp).

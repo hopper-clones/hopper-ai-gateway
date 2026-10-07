@@ -38,7 +38,7 @@
     "alias": "Bí danh",
     "failure": "Thất bại",
     "unknown_error": "Lỗi không xác định",
-    "quota_update_required": "Vui lòng cập nhật phiên bản CPA hoặc kiểm tra bản cập nhật",
+    "quota_update_required": "Vui lòng cập nhật phiên bản Hopper AI Gateway hoặc kiểm tra bản cập nhật",
     "quota_check_credential": "Vui lòng kiểm tra trạng thái credential",
     "copy": "Sao chép",
     "expand": "Mở rộng",
@@ -57,11 +57,11 @@
     "unsaved_changes_message": "Bạn có thay đổi chưa lưu. Rời đi bây giờ sẽ mất các thay đổi đó. Bạn có muốn rời đi không?"
   },
   "title": {
-    "login": "Trung tâm Quản lý CLI Proxy API",
-    "abbr": "CPAMC"
+    "login": "Trung tâm Quản lý Hopper AI Gateway",
+    "abbr": "Hopper AI Gateway"
   },
   "splash": {
-    "title": "CLI Proxy API",
+    "title": "Hopper AI Gateway",
     "subtitle": "Trung tâm Quản lý"
   },
   "login": {
@@ -83,11 +83,11 @@
     "error_timeout": "Kết nối hết thời gian chờ, máy chủ không phản hồi",
     "error_unauthorized": "Xác thực thất bại, key quản lý bị thiếu hoặc không hợp lệ",
     "error_forbidden": "Truy cập bị từ chối, quản lý từ xa bị tắt, key quản lý chưa được cấu hình, hoặc IP này bị cấm tạm thời",
-    "error_not_found": "Không tìm thấy Management API, hãy xác nhận địa chỉ máy chủ trỏ đến backend CLIProxyAPI",
+    "error_not_found": "Không tìm thấy Management API, hãy xác nhận địa chỉ máy chủ trỏ đến backend Hopper AI Gateway",
     "error_server": "Backend gặp lỗi khi xử lý yêu cầu quản lý, hãy kiểm tra log máy chủ",
     "error_cors": "Yêu cầu cross-origin bị chặn, vui lòng kiểm tra cấu hình máy chủ",
     "error_ssl": "Xác minh chứng chỉ SSL/TLS thất bại",
-    "error_legacy_backend": "Backend này chấp nhận Management API v0 nhưng không cung cấp v8. Vui lòng nâng cấp CLIProxyAPI lên v8 hoặc mới hơn để sử dụng trang quản lý này."
+    "error_legacy_backend": "Backend này chấp nhận Management API v0 nhưng không cung cấp v8. Vui lòng nâng cấp Hopper AI Gateway lên v8 hoặc mới hơn để sử dụng trang quản lý này."
   },
   "header": {
     "refresh_all": "Làm mới tất cả",
@@ -307,7 +307,7 @@
     "models_empty": "Không có model khả dụng cho credential này",
     "models_empty_desc": "Credential này có thể chưa được máy chủ nạp, hoặc chưa có model nào gắn với nó.",
     "models_unsupported": "Phiên bản hiện tại không hỗ trợ tính năng này",
-    "models_unsupported_desc": "Vui lòng cập nhật CLI Proxy API lên phiên bản mới nhất và thử lại",
+    "models_unsupported_desc": "Vui lòng cập nhật Hopper AI Gateway lên phiên bản mới nhất và thử lại",
     "models_excluded_badge": "Đã tắt",
     "models_excluded_hint": "Model OAuth này đã bị tắt",
     "status_toggle_label": "Đang bật",
@@ -631,9 +631,9 @@
     "model_count": "{{count}} model bị vô hiệu hóa",
     "list_empty_all": "Chưa có vô hiệu hóa model provider nào; nhấn “Thêm vô hiệu hóa” để tạo.",
     "provider_required": "Vui lòng nhập provider trước",
-    "upgrade_required": "Phiên bản CPA hiện tại không hỗ trợ vô hiệu hóa model OAuth. Vui lòng nâng cấp.",
-    "upgrade_required_title": "Vui lòng nâng cấp CLI Proxy API",
-    "upgrade_required_desc": "Phiên bản máy chủ hiện tại không hỗ trợ lấy danh sách vô hiệu hóa model OAuth. Vui lòng nâng cấp lên phiên bản CPA (CLI Proxy API) mới nhất và thử lại.",
+    "upgrade_required": "Phiên bản Hopper AI Gateway hiện tại không hỗ trợ vô hiệu hóa model OAuth. Vui lòng nâng cấp.",
+    "upgrade_required_title": "Vui lòng nâng cấp Hopper AI Gateway",
+    "upgrade_required_desc": "Phiên bản máy chủ hiện tại không hỗ trợ lấy danh sách vô hiệu hóa model OAuth. Vui lòng nâng cấp lên phiên bản Hopper AI Gateway mới nhất và thử lại.",
     "editor_description": "Chọn các model mà provider hiển thị bằng cách chọn riêng lẻ hoặc dùng quy tắc ký tự đại diện (wildcard).",
     "models_hint": "Mở rộng danh sách để chọn model hoặc nhập quy tắc ký tự đại diện bên dưới."
   },
@@ -677,7 +677,7 @@
     "provider_placeholder": "ví dụ codex / vertex",
     "provider_hint": "Mặc định theo bộ lọc hiện tại; chọn provider có sẵn hoặc nhập tên mới.",
     "model_source_loading": "Đang tải model...",
-    "model_source_unsupported": "Phiên bản CPA hiện tại không hỗ trợ lấy danh sách model (vẫn có thể nhập thủ công).",
+    "model_source_unsupported": "Phiên bản Hopper AI Gateway hiện tại không hỗ trợ lấy danh sách model (vẫn có thể nhập thủ công).",
     "model_source_loaded": "Đã tải {{count}} model. Dùng menu thả trong 'Tên model gốc', hoặc nhập giá trị tùy chỉnh. Lưu danh sách trống sẽ xóa provider đó. Bật 'Giữ tên gốc' để giữ tên gốc trong khi thêm bí danh.",
     "alias_label": "Bí danh model",
     "alias_name_placeholder": "Tên model gốc",
@@ -727,9 +727,9 @@
     "view_mode_diagram": "Sơ đồ",
     "view_mode_list": "Danh sách",
     "provider_required": "Vui lòng nhập provider trước",
-    "upgrade_required": "Tính năng này yêu cầu phiên bản CLI Proxy API (CPA) mới hơn. Vui lòng nâng cấp.",
-    "upgrade_required_title": "Vui lòng nâng cấp CLI Proxy API",
-    "upgrade_required_desc": "Máy chủ hiện tại không hỗ trợ API bí danh model OAuth. Vui lòng nâng cấp lên phiên bản CLI Proxy API (CPA) mới nhất.",
+    "upgrade_required": "Tính năng này yêu cầu phiên bản Hopper AI Gateway mới hơn. Vui lòng nâng cấp.",
+    "upgrade_required_title": "Vui lòng nâng cấp Hopper AI Gateway",
+    "upgrade_required_desc": "Máy chủ hiện tại không hỗ trợ API bí danh model OAuth. Vui lòng nâng cấp lên phiên bản Hopper AI Gateway mới nhất.",
     "editor_description": "Đặt tên gọi nhất quán cho các model của provider để sử dụng trong client của bạn.",
     "edit_title": "Chỉnh sửa bí danh model cho {{provider}}",
     "mapping_hint": "Chọn model gốc, sau đó nhập bí danh mà client của bạn sẽ dùng.",
@@ -819,7 +819,7 @@
     "oauth_callback_required": "Vui lòng dán URL chuyển hướng đầy đủ trước.",
     "oauth_callback_success": "Đã gửi URL callback. Tiếp tục chờ xác thực.",
     "oauth_callback_error": "Không thể gửi URL callback:",
-    "oauth_callback_upgrade_hint": "Vui lòng cập nhật CLI Proxy API hoặc kiểm tra kết nối.",
+    "oauth_callback_upgrade_hint": "Vui lòng cập nhật Hopper AI Gateway hoặc kiểm tra kết nối.",
     "oauth_callback_status_success": "Đã gửi URL callback, đang chờ xác thực...",
     "oauth_callback_status_error": "Gửi URL callback thất bại:",
     "missing_state": "Không thể lấy tham số trạng thái xác thực",
@@ -843,7 +843,7 @@
     "devin_oauth_retry_hint": "Máy chủ có thể vẫn đang chờ ủy quyền. Hãy hủy lượt đăng nhập này trước khi bắt đầu lại.",
     "devin_oauth_title": "Devin OAuth",
     "devin_oauth_button": "Bắt đầu đăng nhập Devin",
-    "devin_oauth_hint": "Đăng nhập Devin / Cognition qua trình duyệt OAuth để tự động lưu file xác thực. Yêu cầu CLI Proxy API v7.3.1 trở lên; vui lòng hoàn tất ủy quyền trong vòng năm phút.",
+    "devin_oauth_hint": "Đăng nhập Devin / Cognition qua trình duyệt OAuth để tự động lưu file xác thực. Yêu cầu Hopper AI Gateway v7.3.1 trở lên; vui lòng hoàn tất ủy quyền trong vòng năm phút.",
     "devin_oauth_url_label": "URL ủy quyền:",
     "devin_copy_link": "Sao chép liên kết",
     "devin_open_link": "Mở liên kết",
@@ -915,9 +915,9 @@
     "request_log_download_success": "Đã tải log yêu cầu xuống thành công",
     "empty_title": "Chưa có Log",
     "empty_desc": "Khi bật \"Ghi log ra file\", log sẽ hiển thị tại đây",
-    "cpa_file_logging_required": "Runtime đang kết nối là CPA. Xem log yêu cầu bật ghi log ra file trước.",
+    "cpa_file_logging_required": "Runtime đang kết nối là Hopper AI Gateway. Xem log yêu cầu bật ghi log ra file trước.",
     "cpa_file_logging_required_title": "Cần bật ghi log ra file",
-    "cpa_file_logging_required_desc": "CPA đọc khung xem log này từ file log cục bộ. Hãy bật logging-to-file trong cấu hình rồi làm mới.",
+    "cpa_file_logging_required_desc": "Hopper AI Gateway đọc khung xem log này từ file log cục bộ. Hãy bật logging-to-file trong cấu hình rồi làm mới.",
     "file_logging_required": "Endpoint log này cần bật ghi log ra file trước khi đọc được file log.",
     "file_logging_required_title": "Cần bật ghi log ra file",
     "file_logging_required_desc": "Endpoint log này đọc file log cục bộ. Hãy bật logging-to-file trong cấu hình rồi làm mới.",
@@ -1093,7 +1093,7 @@
           "plugin_store_sources": "Nguồn Plugin bên thứ ba",
           "plugin_store_sources_desc": "Thêm nguồn registry plugin store; nguồn chính thức tích hợp luôn được giữ",
           "plugin_store_sources_label": "URL registry nguồn plugin (plugins.store-sources)",
-          "plugin_store_sources_placeholder": "https://example.com/cliproxy-plugins/registry.json",
+          "plugin_store_sources_placeholder": "https://example.com/hopper-ai-gateway-plugins/registry.json",
           "plugin_store_sources_hint": "Mỗi dòng một URL registry.json. Dòng trống sẽ bị lọc khi lưu",
           "plugin_store_auth": "Quy tắc xác thực Plugin Store",
           "plugin_store_auth_desc": "Cấu hình header xác thực cho registry riêng tư, metadata GitHub Release hoặc tải artifact",
@@ -1341,7 +1341,7 @@
         },
         "discoveryServiceName": {
           "label": "Tiền tố tên dịch vụ",
-          "hint": "Backend sẽ nối thêm một ID ngắn. Để trống sẽ dùng CPA-<ShortID>."
+          "hint": "Backend sẽ nối thêm một ID ngắn. Để trống sẽ dùng Hopper AI Gateway-<ShortID>."
         },
         "discoveryServiceType": {
           "label": "Loại dịch vụ",
@@ -1633,7 +1633,7 @@
     "description_show_more": "Hiện thêm",
     "description_show_less": "Ẩn bớt",
     "source_name": "Nguồn: {{source}}",
-    "cli_proxy_api_source": "Nguồn CLIProxyAPI",
+    "cli_proxy_api_source": "Sổ đăng ký mặc định",
     "refresh": "Làm mới",
     "retry": "Thử lại",
     "load_failed": "Không thể tải cửa hàng plugin",
@@ -1735,7 +1735,7 @@
   },
   "system_info": {
     "title": "Thông tin Trung tâm Quản lý",
-    "about_title": "Trung tâm Quản lý CLI Proxy API",
+    "about_title": "Trung tâm Quản lý Hopper AI Gateway",
     "models_title": "Model khả dụng",
     "models_desc": "Hiển thị phản hồi /models và tự động dùng API key đã lưu để xác thực.",
     "models_loading": "Đang tải model khả dụng...",
@@ -1751,7 +1751,7 @@
     "quick_links_title": "Liên kết nhanh",
     "quick_links_desc": "Truy cập repository dự án và tài liệu để được trợ giúp và cập nhật.",
     "link_main_repo": "Repository chính",
-    "link_main_repo_desc": "Mã nguồn chương trình lõi CLI Proxy API",
+    "link_main_repo_desc": "Mã nguồn chương trình lõi Hopper AI Gateway",
     "link_webui_repo": "Repository WebUI",
     "link_webui_repo_desc": "Mã nguồn frontend Trung tâm Quản lý",
     "link_docs": "Tài liệu",
@@ -1803,11 +1803,11 @@
     "toggle_collapse": "Thu gọn thanh bên",
     "expand": "Mở rộng",
     "collapse": "Thu gọn",
-    "subtitle": "Bảng điều khiển CLI Proxy API",
+    "subtitle": "Bảng điều khiển quản lý",
     "auth_files_count": "File xác thực: {{count}}"
   },
   "footer": {
-    "api_version": "Phiên bản CLI Proxy API",
+    "api_version": "Phiên bản Hopper AI Gateway",
     "build_date": "Thời gian build",
     "version": "Phiên bản giao diện quản lý"
   },

@@ -517,10 +517,10 @@
     min-width: 0;
     overflow: hidden;
     color: var(--text-primary);
-    font-size: clamp(15px, 1.1vw, 22px);
+    font-size: clamp(15px, 1vw, 20px);
     font-weight: 800;
     letter-spacing: 0;
-    white-space: nowrap;
+    white-space: normal;
   }
 
   .sidebar-brand-subtitle {
