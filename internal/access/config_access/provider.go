@@ -4,28 +4,38 @@ import (
 	"context"
 	"net/http"
 	"strings"
+	"time"
 
 	sdkaccess "github.com/router-for-me/CLIProxyAPI/v8/sdk/access"
 	sdkconfig "github.com/router-for-me/CLIProxyAPI/v8/sdk/config"
 )
 
-// Register ensures the config-access provider is available to the access manager.
+// Register ensures the config-access providers (inline API keys and lane keys)
+// match the configuration: each is registered when it has keys and removed otherwise.
 func Register(cfg *sdkconfig.SDKConfig) {
 	if cfg == nil {
 		sdkaccess.UnregisterProvider(sdkaccess.AccessProviderTypeConfigAPIKey)
+		sdkaccess.UnregisterProvider(sdkaccess.AccessProviderTypeConfigLaneKey)
 		return
 	}
 
-	keys := normalizeKeys(cfg.APIKeys)
-	if len(keys) == 0 {
+	if keys := normalizeKeys(cfg.APIKeys); len(keys) == 0 {
 		sdkaccess.UnregisterProvider(sdkaccess.AccessProviderTypeConfigAPIKey)
-		return
+	} else {
+		sdkaccess.RegisterProvider(
+			sdkaccess.AccessProviderTypeConfigAPIKey,
+			newProvider(sdkaccess.DefaultAccessProviderName, keys),
+		)
 	}
 
-	sdkaccess.RegisterProvider(
-		sdkaccess.AccessProviderTypeConfigAPIKey,
-		newProvider(sdkaccess.DefaultAccessProviderName, keys),
-	)
+	if len(cfg.LaneKeys) == 0 {
+		sdkaccess.UnregisterProvider(sdkaccess.AccessProviderTypeConfigLaneKey)
+	} else {
+		sdkaccess.RegisterProvider(
+			sdkaccess.AccessProviderTypeConfigLaneKey,
+			newLaneKeyProvider(cfg.LaneKeys, time.Now),
+		)
+	}
 }
 
 type provider struct {
@@ -59,36 +69,11 @@ func (p *provider) Authenticate(_ context.Context, r *http.Request) (*sdkaccess.
 	if len(p.keys) == 0 {
 		return nil, sdkaccess.NewNotHandledError()
 	}
-	authHeader := r.Header.Get("Authorization")
-	authHeaderGoogle := r.Header.Get("X-Goog-Api-Key")
-	authHeaderAnthropic := r.Header.Get("X-Api-Key")
-	queryKey := ""
-	queryAuthToken := ""
-	if r.URL != nil {
-		queryKey = r.URL.Query().Get("key")
-		queryAuthToken = r.URL.Query().Get("auth_token")
-	}
-	if authHeader == "" && authHeaderGoogle == "" && authHeaderAnthropic == "" && queryKey == "" && queryAuthToken == "" {
+	candidates := requestCredentials(r)
+	if len(candidates) == 0 {
 		return nil, sdkaccess.NewNoCredentialsError()
 	}
-
-	apiKey := extractBearerToken(authHeader)
-
-	candidates := []struct {
-		value  string
-		source string
-	}{
-		{apiKey, "authorization"},
-		{authHeaderGoogle, "x-goog-api-key"},
-		{authHeaderAnthropic, "x-api-key"},
-		{queryKey, "query-key"},
-		{queryAuthToken, "query-auth-token"},
-	}
-
 	for _, candidate := range candidates {
-		if candidate.value == "" {
-			continue
-		}
 		if _, ok := p.keys[candidate.value]; ok {
 			return &sdkaccess.Result{
 				Provider:  p.Identifier(),
@@ -101,6 +86,37 @@ func (p *provider) Authenticate(_ context.Context, r *http.Request) (*sdkaccess.
 	}
 
 	return nil, sdkaccess.NewInvalidCredentialError()
+}
+
+// credential is one client-supplied key and the header or query it came from.
+type credential struct {
+	value  string
+	source string
+}
+
+// requestCredentials lists the non-empty client keys in the order they are checked.
+func requestCredentials(r *http.Request) []credential {
+	authHeader := r.Header.Get("Authorization")
+	queryKey := ""
+	queryAuthToken := ""
+	if r.URL != nil {
+		queryKey = r.URL.Query().Get("key")
+		queryAuthToken = r.URL.Query().Get("auth_token")
+	}
+	candidates := []credential{
+		{extractBearerToken(authHeader), "authorization"},
+		{r.Header.Get("X-Goog-Api-Key"), "x-goog-api-key"},
+		{r.Header.Get("X-Api-Key"), "x-api-key"},
+		{queryKey, "query-key"},
+		{queryAuthToken, "query-auth-token"},
+	}
+	present := candidates[:0]
+	for _, candidate := range candidates {
+		if candidate.value != "" {
+			present = append(present, candidate)
+		}
+	}
+	return present
 }
 
 func extractBearerToken(header string) string {

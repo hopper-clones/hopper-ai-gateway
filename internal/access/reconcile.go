@@ -36,7 +36,7 @@ func ReconcileProviders(oldCfg, newCfg *config.Config, existing []sdkaccess.Prov
 	finalIDs := make(map[string]struct{}, len(result))
 
 	isInlineProvider := func(id string) bool {
-		return strings.EqualFold(id, sdkaccess.DefaultAccessProviderName)
+		return strings.EqualFold(id, sdkaccess.DefaultAccessProviderName) || strings.EqualFold(id, sdkaccess.LaneKeyAccessProviderName)
 	}
 	appendChange := func(list *[]string, id string) {
 		if isInlineProvider(id) {

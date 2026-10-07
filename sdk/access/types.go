@@ -30,6 +30,12 @@ const (
 
 	// DefaultAccessProviderName is applied when no provider name is supplied.
 	DefaultAccessProviderName = "config-inline"
+
+	// AccessProviderTypeConfigLaneKey is the built-in provider validating expiring lane keys.
+	AccessProviderTypeConfigLaneKey = "config-lane-key"
+
+	// LaneKeyAccessProviderName identifies the built-in lane key provider instance.
+	LaneKeyAccessProviderName = "config-lane-keys"
 )
 
 // MakeInlineAPIKeyProvider constructs an inline API key provider configuration.
