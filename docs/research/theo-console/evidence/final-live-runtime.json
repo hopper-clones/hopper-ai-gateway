@@ -1,0 +1,11 @@
+{
+  "recorded_at": "2026-10-07T10:41:58.187Z",
+  "basis": "real loopback runtime without synthetic fixture",
+  "url": "http://127.0.0.1:48732/management.html#/quota",
+  "routing": "reset-first",
+  "session_affinity": true,
+  "usage_statistics_enabled": true,
+  "connected_credentials": 0,
+  "errors": [],
+  "quota_text": "Quota Management\n\n0 credentials\n·\n0 loaded\n\nShow emails\nRefresh\nAll\n0\nClaude\n0\nAntigravity\n0\nCodex\n0\nxAI\n0\nKimi\n0\nLedger\nNo quota-capable credentials\nConnect an Antigravity, Claude, Codex, xAI, or Kimi credential to track its quota here.\nSearch and sort"
+}

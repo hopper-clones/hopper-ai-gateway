@@ -77,4 +77,12 @@ The browser journey verifies destination headings, removal of exiting layers, fu
 
 [Final quota screenshot](research/theo-console/evidence/final-v5-1976-quota-replay.png), [Quick Start](research/theo-console/evidence/final-v5-quick-start.png), [mobile quota](research/theo-console/evidence/final-v5-mobile-quota.png), [complete browser journey](research/theo-console/evidence/final-v5-browser-journey.json), and [validation with exact artifact hashes](research/theo-console/validation.json) are retained in this repository.
 
-The local runtime enables reset-first and session affinity, uses the verified binary, and remains restricted to loopback. Its copied credential directory is empty; the synthetic reference accounts are never installed there. Actual provider sign-in and live cache/latency/reset behavior remain unqualified.
+The local runtime at `http://127.0.0.1:48732/management.html#/quota` enables reset-first, session affinity, and usage statistics, uses the verified binary, and remains restricted to loopback. Its served HTML digest matches the embedded manifest. The former managed gateway process has been stopped; this is the single replacement console. Its copied credential directory is empty; the synthetic reference accounts are never installed there. Actual provider sign-in and live cache/latency/reset behavior remain unqualified.
+
+[Actual runtime receipt](research/theo-console/evidence/final-live-runtime.json) and [actual empty-account screen](research/theo-console/evidence/final-live-empty-quota.png) use the real API without replay. No live account totals are inferred from the reference fixture.
+
+## Studio review records
+
+The canonical project is `retained in private operator evidence`. Design Studio product `hopper-ai-gateway-fork` attached the repository screenshots at capture `20261007-104014`, with all six retained image hashes and no missed captures. Three v5 images qualify the final layout; the three earlier v4 images remain explicitly inconclusive. The captured checkout still identified the preceding checkpoint; the image SHA-256 values identify the actual uncommitted bytes captured, subsequently committed in this fork.
+
+User Experience Studio journey `gateway-fork-quota-journey`, revision 2, digest `sha256:969728ba89b5477e91adc323a79226bd3aa92a19624e5c8b687203574086f019`, retains eight synthetic successes, 57 provider GETs, and zero JavaScript errors. Its machine qualification is **descriptive-evidence-only**, with zero observed human usability records. This supports browser interaction and reference-layout evidence; it does not establish live provider access or human usability acceptance. Original receipts remain in private operator evidence. All three temporary review services were stopped after capture.
