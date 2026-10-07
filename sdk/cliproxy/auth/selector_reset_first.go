@@ -122,9 +122,15 @@ func RoutingQuotaWindows(a *Auth, model string, now time.Time) []RoutingQuotaWin
 			appendWindow(scope, "anthropic-ratelimit-unified-"+scope, true)
 		}
 		lowerModel := strings.ToLower(canonicalModelKey(model))
-		for _, family := range []string{"sonnet", "opus"} {
+		for _, family := range []string{"sonnet", "opus", "fable"} {
 			if (strings.HasPrefix(lowerModel, "claude-") && strings.Contains(lowerModel, family)) || strings.HasPrefix(lowerModel, family+"-") {
-				appendWindow("7d-"+family, "anthropic-ratelimit-unified-7d-"+family, true)
+				prefix := "anthropic-ratelimit-unified-7d-" + family
+				if family == "fable" && signals[prefix+"-reset"] == "" && signals[prefix+"-status"] == "" && signals[prefix+"-utilization"] == "" {
+					// The existing provider executor identifies 7d_oi as the Fable
+					// weekly window. Its denial must never block an Opus request.
+					prefix = "anthropic-ratelimit-unified-7d_oi"
+				}
+				appendWindow("7d-"+family, prefix, true)
 			}
 		}
 		// Unified/overage rejection does not identify a broad subscription window.

@@ -54,6 +54,9 @@ func TestObservedQuotaExhaustionScopeAndExpiry(t *testing.T) {
 		blocked     bool
 		reset       time.Time
 	}{
+		{"Fable weekly native scope", "claude-fable-5-1", map[string]string{"Anthropic-Ratelimit-Unified-7d_oi-Status": "rejected", "Anthropic-Ratelimit-Unified-7d_oi-Reset": "1800003600"}, now, true, now.Add(time.Hour)},
+		{"Fable weekly leaves Opus available", "claude-opus-5-5", map[string]string{"Anthropic-Ratelimit-Unified-7d_oi-Status": "rejected", "Anthropic-Ratelimit-Unified-7d_oi-Reset": "1800003600"}, now, false, time.Time{}},
+		{"Fable weekly normalized native refresh", "claude-fable-5", map[string]string{"Anthropic-Ratelimit-Unified-7d-Fable-Utilization": "1", "Anthropic-Ratelimit-Unified-7d-Fable-Reset": "1800003600"}, now, true, now.Add(time.Hour)},
 		{"model weekly sonnet", "claude-sonnet-4", map[string]string{"Anthropic-Ratelimit-Unified-7d-Sonnet-Status": "rejected", "Anthropic-Ratelimit-Unified-7d-Sonnet-Reset": "1800003600"}, now, true, now.Add(time.Hour)},
 		{"model weekly opus unaffected", "claude-opus-4", map[string]string{"Anthropic-Ratelimit-Unified-7d-Sonnet-Status": "rejected", "Anthropic-Ratelimit-Unified-7d-Sonnet-Reset": "1800003600"}, now, false, time.Time{}},
 		{"older Claude family name", "claude-3-7-sonnet", map[string]string{"Anthropic-Ratelimit-Unified-7d-Sonnet-Utilization": "1", "Anthropic-Ratelimit-Unified-7d-Sonnet-Reset": "1800003600"}, now, true, now.Add(time.Hour)},
