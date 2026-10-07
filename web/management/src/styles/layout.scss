@@ -852,6 +852,11 @@
     display: none;
   }
 
+  .app-shell.sidebar-is-open .main-header .header-actions {
+    visibility: hidden;
+    pointer-events: none;
+  }
+
   .main-header {
     .sidebar-toggle-floating {
       display: none;
