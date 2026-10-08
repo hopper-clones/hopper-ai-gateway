@@ -209,6 +209,7 @@ func (s *Service) Run(ctx context.Context) error {
 		}
 		log.Info("file watcher started for config and auth directory changes")
 		s.syncPluginModelRuntime(ctx)
+		s.startCapacityCodex(ctx)
 	}
 
 	s.registerModelRefreshCallback()

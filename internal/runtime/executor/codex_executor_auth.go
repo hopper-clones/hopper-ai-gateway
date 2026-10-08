@@ -14,8 +14,51 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+// codexFileCredential is the Runtime of a Codex credential whose tokens live in
+// an official Codex login file owned by another program (see
+// internal/capacitycodex). The gateway never refreshes or persists its tokens
+// itself; the credential does, in that file.
+type codexFileCredential interface {
+	PrepareAccess(ctx context.Context) error
+	RefreshRejected(ctx context.Context) error
+	AccessToken() string
+}
+
+func codexFileCredentialOf(auth *cliproxyauth.Auth) (codexFileCredential, bool) {
+	if auth == nil {
+		return nil, false
+	}
+	cred, ok := auth.Runtime.(codexFileCredential)
+	return cred, ok && cred != nil
+}
+
+// ShouldPrepareRequestAuth reports whether the auth reads its token from a login file.
+func (e *CodexExecutor) ShouldPrepareRequestAuth(auth *cliproxyauth.Auth) bool {
+	_, ok := codexFileCredentialOf(auth)
+	return ok
+}
+
+// PrepareRequestAuth makes a file-backed token current before the request. A
+// failure is typed and routes the request to other credentials.
+func (e *CodexExecutor) PrepareRequestAuth(ctx context.Context, auth *cliproxyauth.Auth) (*cliproxyauth.Auth, error) {
+	cred, ok := codexFileCredentialOf(auth)
+	if !ok {
+		return nil, nil
+	}
+	if err := cred.PrepareAccess(ctx); err != nil {
+		return nil, err
+	}
+	return nil, nil
+}
+
 func (e *CodexExecutor) Refresh(ctx context.Context, auth *cliproxyauth.Auth) (*cliproxyauth.Auth, error) {
 	log.Debugf("codex executor: refresh called")
+	if cred, ok := codexFileCredentialOf(auth); ok {
+		if err := cred.RefreshRejected(ctx); err != nil {
+			return nil, err
+		}
+		return auth, nil
+	}
 	if refreshed, handled, err := helps.RefreshAuthViaHome(ctx, e.cfg, auth); handled {
 		return refreshed, err
 	}
@@ -86,6 +129,11 @@ func codexCreds(a *cliproxyauth.Auth) (apiKey, baseURL string) {
 	if a.Attributes != nil {
 		apiKey = a.Attributes["api_key"]
 		baseURL = a.Attributes["base_url"]
+	}
+	if apiKey == "" {
+		if cred, ok := codexFileCredentialOf(a); ok {
+			apiKey = cred.AccessToken()
+		}
 	}
 	if apiKey == "" && a.Metadata != nil {
 		if v, ok := a.Metadata["access_token"].(string); ok {

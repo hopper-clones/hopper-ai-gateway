@@ -744,6 +744,7 @@ func (h *Handler) buildAuthFileEntryLocked(auth *coreauth.Auth, quotaSupported .
 	if claims := extractCodexIDTokenClaims(auth); claims != nil {
 		entry["id_token"] = claims
 	}
+	addCapacityCodexFields(entry, auth)
 	// Expose priority from Attributes (set by synthesizer from JSON "priority" field).
 	// Fall back to Metadata for auths registered via UploadAuthFile (no synthesizer).
 	if p := strings.TrimSpace(authAttribute(auth, "priority")); p != "" {
@@ -989,4 +990,25 @@ func isUnsafeAuthFileName(name string) bool {
 		return true
 	}
 	return false
+}
+
+// addCapacityCodexFields marks a credential registered from an AI Capacity
+// Codex login: the source, the Capacity account hash and label, and the state.
+// The token and the login file location are never part of the entry.
+func addCapacityCodexFields(entry gin.H, auth *coreauth.Auth) {
+	if auth == nil || authAttribute(auth, "credential_source") != "capacity-codex" {
+		return
+	}
+	entry["source"] = "capacity-codex"
+	entry["capacity_account"] = gin.H{
+		"id":    authAttribute(auth, "capacity_account_id"),
+		"label": authAttribute(auth, "capacity_label"),
+	}
+	if status, ok := auth.Runtime.(interface{ CapacityStatus() (string, string) }); ok && status != nil {
+		state, reason := status.CapacityStatus()
+		entry["state"] = state
+		if reason != "" {
+			entry["state_reason"] = reason
+		}
+	}
 }
