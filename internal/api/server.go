@@ -50,6 +50,10 @@ type Server struct {
 	// muxHTTPListener receives HTTP connections selected by the multiplexer.
 	muxHTTPListener *muxListener
 
+	// clientServers serve the client API only on cfg.ClientHosts (see server_client_listeners.go).
+	clientServers []*http.Server
+	clientStopped bool
+
 	// handlers contains the API handlers for processing requests.
 	handlers         *handlers.BaseAPIHandler
 	codexLiveHandler *codexlive.Handler
@@ -355,6 +359,14 @@ func (s *Server) Start() error {
 		}
 	}
 
+	var clientTLS *tls.Config
+	if useTLS {
+		clientTLS = s.server.TLSConfig
+	}
+	if cfg != nil {
+		s.startClientListeners(cfg.Port, clientTLS)
+	}
+
 	httpErrCh := make(chan error, 1)
 	acceptErrCh := make(chan error, 1)
 
@@ -438,6 +450,8 @@ func (s *Server) Stop(ctx context.Context) error {
 		default:
 		}
 	}
+
+	s.stopClientListeners()
 
 	s.listenerMu.Lock()
 	muxHTTP := s.muxHTTPListener

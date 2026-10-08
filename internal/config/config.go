@@ -16,6 +16,12 @@ type Config struct {
 	// Port is the network port on which the API server will listen.
 	Port int `yaml:"port" json:"-"`
 
+	// ClientHosts lists extra IP addresses on which the client API (model requests) is served on
+	// the same port, beside Host: for example a private network address of this machine. These
+	// listeners never serve management, the control panel, OAuth callbacks or the Redis protocol.
+	// Literal, specific IP addresses only; the server applies this list at startup.
+	ClientHosts []string `yaml:"client-hosts,omitempty" json:"-"`
+
 	// TrustedProxies lists the IPs or CIDRs allowed to provide forwarded client IP headers.
 	// The server applies this list at startup; changing it requires a restart.
 	TrustedProxies []string `yaml:"trusted-proxies" json:"trusted-proxies"`

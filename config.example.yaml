@@ -29,6 +29,12 @@ server:
   # Server port
   port: 8317
 
+  # Extra IP addresses on which only the client API (/v1, /v1beta, /openai/v1, /backend-api/codex,
+  # /healthz) is served on the same port, e.g. this machine's private network address. Management,
+  # the control panel and OAuth callbacks stay on host. Specific IP addresses only (no 0.0.0.0 or ::).
+  # Restart after changing this setting.
+  client-hosts: []
+
   # IP addresses or CIDRs of proxies allowed to supply forwarded client IP headers.
   # An empty list (the default) does not trust forwarded headers. Restart after changing this setting.
   trusted-proxies: []
