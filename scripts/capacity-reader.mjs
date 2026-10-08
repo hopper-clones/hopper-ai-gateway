@@ -127,7 +127,9 @@ export function projectCapacity({
     },
   };
 }
-export async function readCapacity(env = process.env) {
+// openCapacity selects the Capacity owner: its running local HTTP session when
+// one answers, else the saved owner reader over the state directory.
+async function openCapacity(env) {
   const state = env.HOPPER_AI_CAPACITY_STATE,
     root = env.HOPPER_AI_CAPACITY_PACKAGE;
   if (!state || !root || !isAbsolute(state) || !isAbsolute(root))
@@ -140,51 +142,70 @@ export async function readCapacity(env = process.env) {
     !manifest.exports?.["./reader"]
   )
     throw Error("CAPACITY_INVALID_PACKAGE");
-  let reader, invoke, mode;
+  let session;
   try {
-    let session;
+    session = JSON.parse(
+      await readFile(join(state, "local-session.json"), "utf8"),
+    );
+  } catch {}
+  if (session?.url) {
+    const origin = new URL(session.url);
+    if (
+      !["127.0.0.1", "localhost", "[::1]"].includes(origin.hostname) ||
+      !["http:", "https:"].includes(origin.protocol) ||
+      origin.username ||
+      origin.password
+    )
+      throw Error("CAPACITY_INVALID_SESSION");
+    const headers = session.token
+        ? { authorization: `Bearer ${session.token}` }
+        : {},
+      request = async (name, input = {}) => {
+        const url = new URL(`/v1/capacity/${name}`, origin);
+        for (const [k, v] of Object.entries(input))
+          url.searchParams.set(k, String(v));
+        const res = await fetch(url, { headers, redirect: "error" });
+        if (!res.ok) throw Error("CAPACITY_OWNER_UNAVAILABLE");
+        return res.json();
+      };
     try {
-      session = JSON.parse(
-        await readFile(join(state, "local-session.json"), "utf8"),
-      );
+      await request("status");
+      return {
+        state,
+        root,
+        manifest,
+        invoke: request,
+        mode: "owner-http",
+        close: async () => {},
+      };
     } catch {}
-    if (session?.url) {
-      const origin = new URL(session.url);
-      if (
-        !["127.0.0.1", "localhost", "[::1]"].includes(origin.hostname) ||
-        !["http:", "https:"].includes(origin.protocol) ||
-        origin.username ||
-        origin.password
-      )
-        throw Error("CAPACITY_INVALID_SESSION");
-      const headers = session.token
-          ? { authorization: `Bearer ${session.token}` }
-          : {},
-        request = async (name, input = {}) => {
-          const url = new URL(`/v1/capacity/${name}`, origin);
-          for (const [k, v] of Object.entries(input))
-            url.searchParams.set(k, String(v));
-          const res = await fetch(url, { headers, redirect: "error" });
-          if (!res.ok) throw Error("CAPACITY_OWNER_UNAVAILABLE");
-          return res.json();
-        };
-      try {
-        await request("status");
-        invoke = request;
-        mode = "owner-http";
-      } catch {}
-    }
-    if (!invoke) {
-      process.env.HOPPER_CAPACITY_ACCOUNT_DISCOVERY = "off";
-      const exp = manifest.exports["./reader"],
-        entry = resolve(root, typeof exp === "string" ? exp : exp.import);
-      if (!entry.startsWith(resolve(root) + "/"))
-        throw Error("CAPACITY_INVALID_PACKAGE");
-      const { createCapacityReader } = await import(pathToFileURL(entry).href);
-      reader = await createCapacityReader(state);
-      invoke = (name, input) => reader.invoke(name, input);
-      mode = "saved-owner-reader";
-    }
+  }
+  process.env.HOPPER_CAPACITY_ACCOUNT_DISCOVERY = "off";
+  const { createCapacityReader } = await importExport(root, manifest, "./reader");
+  const reader = await createCapacityReader(state);
+  return {
+    state,
+    root,
+    manifest,
+    invoke: (name, input) => reader.invoke(name, input),
+    mode: "saved-owner-reader",
+    close: () => reader.close(),
+  };
+}
+// importExport loads one public export of the configured package, refusing an
+// entry outside the package root.
+async function importExport(root, manifest, name) {
+  const exp = manifest.exports?.[name];
+  if (!exp) throw Error("CAPACITY_INVALID_PACKAGE");
+  const entry = resolve(root, typeof exp === "string" ? exp : exp.import);
+  if (!entry.startsWith(resolve(root) + "/"))
+    throw Error("CAPACITY_INVALID_PACKAGE");
+  return import(pathToFileURL(entry).href);
+}
+export async function readCapacity(env = process.env) {
+  const owner = await openCapacity(env);
+  const invoke = owner.invoke;
+  try {
     const tomorrow = new Date();
     tomorrow.setUTCDate(tomorrow.getUTCDate() + 1);
     const to = tomorrow.toISOString().slice(0, 10);
@@ -222,16 +243,108 @@ export async function readCapacity(env = process.env) {
       composition,
       tokens,
       accountTokens,
-      mode,
-      version: manifest.version,
+      mode: owner.mode,
+      version: owner.manifest.version,
     });
   } finally {
-    if (reader) await reader.close();
+    await owner.close();
+  }
+}
+// pickModel chooses the model and reasoning effort used to ask Capacity's
+// selector about an account: the first model in the account's own observed
+// catalog that lists a reasoning effort, preferring "medium".
+export function pickModel(account) {
+  for (const m of account?.modelAvailability?.models ?? []) {
+    const efforts = Array.isArray(m?.reasoningEfforts)
+      ? m.reasoningEfforts
+      : [];
+    if (typeof m?.model === "string" && efforts.length)
+      return {
+        model: m.model,
+        reasoningEffort: efforts.includes("medium") ? "medium" : efforts[0],
+      };
+  }
+  return null;
+}
+// projectCodexAccounts asks the selector about every Codex account in the
+// snapshot, in snapshot order. Labels and ids match projectCapacity. The private
+// subscriptionAccount fields are for the gateway process only.
+export async function projectCodexAccounts({ snapshot, resolveCodex }) {
+  if (!Array.isArray(snapshot?.accounts))
+    throw Error("CAPACITY_INVALID_RESPONSE");
+  const ordinals = {},
+    accounts = [];
+  for (const a of snapshot.accounts) {
+    const label = `${a.provider} ${(ordinals[a.provider] = (ordinals[a.provider] ?? 0) + 1)}`;
+    if (a.provider !== "codex") continue;
+    const entry = { id: hash(a.accountRef), label, model: null, refused: null };
+    const pick = pickModel(a);
+    if (!pick) {
+      accounts.push({ ...entry, refused: "CAPACITY_MODEL_CATALOG_REQUIRED" });
+      continue;
+    }
+    entry.model = pick.model;
+    try {
+      const result = await resolveCodex({ accountRef: a.accountRef, ...pick });
+      const s = result?.subscriptionAccount;
+      if (
+        !s?.home ||
+        !isAbsolute(s.home) ||
+        s.accountRef !== a.accountRef ||
+        !s.expectedEmail ||
+        !s.providerAccountId
+      )
+        throw Object.assign(Error("CAPACITY_INVALID_RESPONSE"), {
+          code: "CAPACITY_INVALID_RESPONSE",
+        });
+      accounts.push({
+        ...entry,
+        account: {
+          accountRef: s.accountRef,
+          home: s.home,
+          expectedEmail: s.expectedEmail,
+          providerAccountId: s.providerAccountId,
+        },
+      });
+    } catch (e) {
+      const code =
+        typeof e?.code === "string" && /^[A-Z_]{3,80}$/.test(e.code)
+          ? e.code
+          : "CAPACITY_SELECTION_REFUSED";
+      accounts.push({ ...entry, refused: code });
+    }
+  }
+  return {
+    schemaVersion: "hopper.gateway-capacity-codex.v1",
+    readAt: new Date().toISOString(),
+    accounts,
+  };
+}
+export async function readCodexAccounts(env = process.env) {
+  const owner = await openCapacity(env);
+  let selector;
+  try {
+    const snapshot = await owner.invoke("snapshot", { reveal: false });
+    const { createCapacitySubscriptionSelector } = await importExport(
+      owner.root,
+      owner.manifest,
+      "./subscription-selection",
+    );
+    selector = createCapacitySubscriptionSelector(owner.state);
+    return await projectCodexAccounts({
+      snapshot,
+      resolveCodex: (input) => selector.resolveCodex(input),
+    });
+  } finally {
+    selector?.close();
+    await owner.close();
   }
 }
 if (import.meta.main) {
   try {
-    console.log(JSON.stringify(await readCapacity()));
+    const read =
+      process.argv[2] === "codex-accounts" ? readCodexAccounts : readCapacity;
+    console.log(JSON.stringify(await read()));
     process.exit(0);
   } catch (e) {
     console.error(
@@ -241,6 +354,7 @@ if (import.meta.main) {
           "CAPACITY_INVALID_PACKAGE",
           "CAPACITY_INVALID_SESSION",
           "CAPACITY_INCOMPLETE_HISTORY",
+          "CAPACITY_INVALID_RESPONSE",
         ].includes(e.message)
           ? e.message
           : "CAPACITY_OWNER_UNAVAILABLE",

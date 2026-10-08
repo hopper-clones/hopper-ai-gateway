@@ -1,5 +1,9 @@
 import { test, expect } from "bun:test";
-import { projectCapacity } from "./capacity-reader.mjs";
+import {
+  projectCapacity,
+  projectCodexAccounts,
+  pickModel,
+} from "./capacity-reader.mjs";
 test("projects every account and preserves unknown values without private identities", () => {
   const accounts = Array.from({ length: 701 }, (_, i) => ({
     accountRef: `private-${i}`,
@@ -58,4 +62,55 @@ test("projects every account and preserves unknown values without private identi
     "providerAccountId",
   ])
     expect(encoded).not.toContain(secret);
+});
+test("lists Codex accounts with the selector's private connection or its refusal", async () => {
+  const catalog = (models) => ({ modelAvailability: { models } });
+  const snapshot = {
+    accounts: [
+      { accountRef: "c-1", provider: "claude" },
+      { accountRef: "x-1", provider: "codex", ...catalog([{ model: "m-1", reasoningEfforts: ["low", "medium"] }]) },
+      { accountRef: "x-2", provider: "codex", ...catalog([{ model: "m-2", reasoningEfforts: ["high"] }]) },
+      { accountRef: "x-3", provider: "codex" },
+    ],
+  };
+  const asked = [];
+  const result = await projectCodexAccounts({
+    snapshot,
+    resolveCodex: async (input) => {
+      asked.push(input);
+      if (input.accountRef === "x-2")
+        throw Object.assign(Error("CAPACITY_CONNECTION_NOT_CURRENT"), {
+          code: "CAPACITY_CONNECTION_NOT_CURRENT",
+        });
+      return {
+        selection: {},
+        executable: "/bin/codex",
+        subscriptionAccount: {
+          home: "/private/home-1",
+          accountRef: input.accountRef,
+          expectedEmail: "one@example.com",
+          providerAccountId: "acct-1",
+        },
+      };
+    },
+  });
+  expect(result.schemaVersion).toBe("hopper.gateway-capacity-codex.v1");
+  expect(asked).toEqual([
+    { accountRef: "x-1", model: "m-1", reasoningEffort: "medium" },
+    { accountRef: "x-2", model: "m-2", reasoningEffort: "high" },
+  ]);
+  expect(result.accounts.map((a) => [a.label, a.refused])).toEqual([
+    ["codex 1", null],
+    ["codex 2", "CAPACITY_CONNECTION_NOT_CURRENT"],
+    ["codex 3", "CAPACITY_MODEL_CATALOG_REQUIRED"],
+  ]);
+  expect(result.accounts[0].account).toEqual({
+    accountRef: "x-1",
+    home: "/private/home-1",
+    expectedEmail: "one@example.com",
+    providerAccountId: "acct-1",
+  });
+  expect(result.accounts[0].id).toHaveLength(24);
+  expect(JSON.stringify(result)).not.toContain("/bin/codex");
+  expect(pickModel({})).toBeNull();
 });
