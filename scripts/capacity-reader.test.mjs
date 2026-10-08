@@ -1,5 +1,6 @@
 import { test, expect } from "bun:test";
 import {
+  refreshCodexAccount,
   projectCapacity,
   projectCodexAccounts,
   pickModel,
@@ -113,4 +114,31 @@ test("lists Codex accounts with the selector's private connection or its refusal
   expect(result.accounts[0].id).toHaveLength(24);
   expect(JSON.stringify(result)).not.toContain("/bin/codex");
   expect(pickModel({})).toBeNull();
+});
+
+test("native renewal targets one selected owner and refuses terminal auth or changed identity",async()=>{
+ const {mkdtemp,writeFile,rm}=await import('node:fs/promises');
+ const {tmpdir}=await import('node:os');const {join}=await import('node:path');
+ const state=await mkdtemp(join(tmpdir(),'capacity-bridge-'));
+ const connection={accountRef:'selected',sourceId:'codex:selected',state:'live',code:null};
+ try{
+  await writeFile(join(state,'local-session.json'),JSON.stringify({kind:'native',url:'http://127.0.0.1:1234',token:'fixture'}));
+  for(const mode of ['ok','reauth','changed','failed']){
+   const calls=[];
+   const request=async(url,options)=>{
+    expect(url.pathname).toBe('/native/request');expect(options.redirect).toBe('error');
+    const call=JSON.parse(options.body);calls.push(call);
+    let rows=[connection];
+    if(mode==='reauth')rows=[{...connection,state:'reauth'}];
+    if(calls.length===3&&mode==='changed')rows=[{...connection,accountRef:'other'}];
+    if(calls.length===3&&mode==='failed')rows=[{...connection,code:'SOURCE_TIMEOUT',state:'unavailable'}];
+    return Response.json({status:200,body:JSON.stringify({connections:rows})});
+   };
+   const operation=refreshCodexAccount({accountRef:'selected'},{HOPPER_AI_CAPACITY_STATE:state},request);
+   if(mode==='ok')expect((await operation).renewed).toBe(true);
+   else await expect(operation).rejects.toThrow('CAPACITY_OWNER_UNAVAILABLE');
+   if(mode==='reauth')expect(calls.length).toBe(1);
+   else expect(JSON.parse(calls[1].body)).toEqual({accountRef:'selected'});
+  }
+ }finally{await rm(state,{recursive:true,force:true});}
 });

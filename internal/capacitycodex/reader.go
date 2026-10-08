@@ -37,6 +37,38 @@ type Account struct {
 // Reader lists Capacity's Codex accounts.
 type Reader func(ctx context.Context) ([]Account, error)
 
+// CommandRefresher delegates to the running Capacity owner. No saved-reader or
+// direct OAuth fallback is permitted for this mutation.
+func CommandRefresher() RefreshFunc {
+	return func(ctx context.Context, accountRef string) error {
+		script, bun := os.Getenv("HOPPER_AI_CAPACITY_READER"), os.Getenv("HOPPER_AI_CAPACITY_BUN")
+		if !filepath.IsAbs(script) || accountRef == "" {
+			return ErrReaderUnconfigured
+		}
+		if bun == "" {
+			var err error
+			bun, err = exec.LookPath("bun")
+			if err != nil {
+				return ErrReaderUnconfigured
+			}
+		}
+		ctx, cancel := context.WithTimeout(ctx, readerTimeout)
+		defer cancel()
+		input, _ := json.Marshal(map[string]string{"accountRef": accountRef})
+		cmd := exec.CommandContext(ctx, bun, script, "codex-refresh")
+		cmd.Env = readerEnv(os.Environ())
+		cmd.Stdin = bytes.NewReader(input)
+		cmd.WaitDelay = time.Second
+		configureProcess(cmd)
+		var diagnostic bytes.Buffer
+		cmd.Stderr = &diagnostic
+		if err := cmd.Run(); err != nil {
+			return readerFailure(ctx, diagnostic.Bytes())
+		}
+		return nil
+	}
+}
+
 // ErrReaderUnconfigured means the Capacity reader environment is not set.
 var ErrReaderUnconfigured = errors.New("CAPACITY_UNCONFIGURED")
 

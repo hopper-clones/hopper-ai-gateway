@@ -26,7 +26,7 @@ func (s *Service) startCapacityCodex(ctx context.Context) {
 	remove := func(id string) {
 		s.emitAuthUpdate(ctx, watcher.AuthUpdate{Action: watcher.AuthUpdateActionDelete, ID: id})
 	}
-	source := capacitycodex.NewSource(reader, capacitycodex.CodexRefresher(s.cfg), upsert, remove)
+	source := capacitycodex.NewSource(reader, capacitycodex.CommandRefresher(), upsert, remove)
 	interval := s.cfg.CapacityCodex.RefreshInterval()
 	log.Infof("capacity-codex enabled (refresh=%s)", interval)
 	go source.Run(ctx, interval)

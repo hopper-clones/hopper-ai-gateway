@@ -8,7 +8,6 @@ import (
 	"testing"
 	"time"
 
-	codexauth "github.com/router-for-me/CLIProxyAPI/v8/internal/auth/codex"
 	"github.com/router-for-me/CLIProxyAPI/v8/internal/registry"
 	coreauth "github.com/router-for-me/CLIProxyAPI/v8/sdk/cliproxy/auth"
 	cliproxyexecutor "github.com/router-for-me/CLIProxyAPI/v8/sdk/cliproxy/executor"
@@ -59,9 +58,9 @@ func TestRefreshFailureMarksUnavailableAndOthersServe(t *testing.T) {
 	good := accessToken(t, "b", baseTime.Add(time.Hour))
 	writeLogin(t, homeGood, "b@example.test", "acct-b", good, "refresh-b", baseTime)
 	var refreshCalls atomic.Int32
-	refresh := func(context.Context, string) (*codexauth.CodexTokenData, error) {
+	refresh := func(context.Context, string) error {
 		refreshCalls.Add(1)
-		return nil, errors.New("token refresh failed with status 400")
+		return errors.New("owner unavailable")
 	}
 
 	manager := coreauth.NewManager(nil, &coreauth.RoundRobinSelector{}, nil)

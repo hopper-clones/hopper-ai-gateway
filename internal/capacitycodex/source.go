@@ -8,8 +8,6 @@ import (
 	"sync"
 	"time"
 
-	codexauth "github.com/router-for-me/CLIProxyAPI/v8/internal/auth/codex"
-	"github.com/router-for-me/CLIProxyAPI/v8/internal/config"
 	coreauth "github.com/router-for-me/CLIProxyAPI/v8/sdk/cliproxy/auth"
 	log "github.com/sirupsen/logrus"
 )
@@ -41,13 +39,6 @@ type Source struct {
 // NewSource builds a source. upsert and remove register and unregister auths.
 func NewSource(read Reader, refresh RefreshFunc, upsert func(*coreauth.Auth), remove func(string)) *Source {
 	return &Source{read: read, refresh: refresh, upsert: upsert, remove: remove, now: time.Now, current: map[string]*Credential{}}
-}
-
-// CodexRefresher refreshes tokens with the gateway's existing Codex client.
-func CodexRefresher(cfg *config.Config) RefreshFunc {
-	return func(ctx context.Context, refreshToken string) (*codexauth.CodexTokenData, error) {
-		return codexauth.NewCodexAuth(cfg).RefreshTokens(ctx, refreshToken)
-	}
 }
 
 // Run syncs now and then every interval until ctx ends.
@@ -116,6 +107,7 @@ func (s *Source) credentialFor(account Account) *Credential {
 		return nil
 	}
 	cred := newCredential(path, account.Label, account.Account.ExpectedEmail, account.Account.ProviderAccountID, s.now, s.refresh)
+	cred.accountRef = account.Account.AccountRef
 	cred.mu.Lock()
 	err := cred.load()
 	cred.mu.Unlock()

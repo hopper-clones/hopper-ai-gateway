@@ -12,7 +12,6 @@ import (
 	"testing"
 	"time"
 
-	codexauth "github.com/router-for-me/CLIProxyAPI/v8/internal/auth/codex"
 	coreauth "github.com/router-for-me/CLIProxyAPI/v8/sdk/cliproxy/auth"
 )
 
@@ -96,9 +95,9 @@ func newTestSource(t *testing.T, accounts func() []Account, clock *testClock, re
 }
 
 func noRefresh(t *testing.T) RefreshFunc {
-	return func(context.Context, string) (*codexauth.CodexTokenData, error) {
+	return func(context.Context, string) error {
 		t.Fatal("refresh must not be called")
-		return nil, nil
+		return nil
 	}
 }
 
@@ -251,19 +250,20 @@ func TestExpiredTokenRereadsFileBeforeRefreshing(t *testing.T) {
 	}
 }
 
-func TestExpiredTokenRefreshesAndWritesBackPreservingKeys(t *testing.T) {
+func TestExpiredTokenDelegatesToOwnerAndReloadsItsDurableResult(t *testing.T) {
 	clock := &testClock{now: baseTime}
 	home := t.TempDir()
 	path := writeLogin(t, home, "a@example.test", "acct-a", accessToken(t, "old", baseTime.Add(time.Minute)), "refresh-old", baseTime)
 	newAccess := accessToken(t, "new", baseTime.Add(10*time.Hour))
 	newID := idToken(t, "a@example.test", "acct-a")
 	var calls atomic.Int32
-	refresh := func(_ context.Context, refreshToken string) (*codexauth.CodexTokenData, error) {
+	refresh := func(_ context.Context, accountRef string) error {
 		calls.Add(1)
-		if refreshToken != "refresh-old" {
-			t.Errorf("refresh token = %q", refreshToken)
+		if accountRef != "ref-hash-a" {
+			t.Errorf("selected reference = %q", accountRef)
 		}
-		return &codexauth.CodexTokenData{IDToken: newID, AccessToken: newAccess, RefreshToken: "refresh-new", AccountID: "acct-a"}, nil
+		writeLogin(t, home, "a@example.test", "acct-a", newAccess, "refresh-new", clock.now)
+		return nil
 	}
 	cred := registeredCredential(t, home, clock, refresh)
 	if err := cred.PrepareAccess(context.Background()); err != nil || calls.Load() != 0 {
@@ -291,7 +291,7 @@ func TestExpiredTokenRefreshesAndWritesBackPreservingKeys(t *testing.T) {
 	if file["auth_mode"] != "chatgpt" || file["OPENAI_API_KEY"] != nil || file["future_key"] == nil || tokens["future_token_field"] == nil {
 		t.Fatalf("other keys not preserved: %v", file)
 	}
-	if file["last_refresh"] != clock.now.Format(time.RFC3339Nano) {
+	if file["last_refresh"] != "2026-10-01T00:00:00Z" {
 		t.Fatalf("last_refresh = %v", file["last_refresh"])
 	}
 	text := string(data)
@@ -319,7 +319,7 @@ func TestRefreshRejectedDoesNotRefreshUnexpiredToken(t *testing.T) {
 	clock := &testClock{now: baseTime}
 	home := t.TempDir()
 	writeLogin(t, home, "a@example.test", "acct-a", accessToken(t, "a", baseTime.Add(time.Hour)), "refresh-a", baseTime)
-	cred := registeredCredential(t, home, clock, noRefresh(t))
+	cred := registeredCredential(t, home, clock, func(context.Context, string) error { return nil })
 	var unavailableErr *UnavailableError
 	if err := cred.RefreshRejected(context.Background()); !errors.As(err, &unavailableErr) || unavailableErr.Reason != ReasonTokenRejected || unavailableErr.StatusCode() != 401 {
 		t.Fatalf("err = %v", err)
@@ -329,5 +329,42 @@ func TestRefreshRejectedDoesNotRefreshUnexpiredToken(t *testing.T) {
 	writeLogin(t, home, "a@example.test", "acct-a", next, "refresh-b", baseTime.Add(time.Minute))
 	if err := cred.RefreshRejected(context.Background()); err != nil || cred.AccessToken() != next {
 		t.Fatalf("err = %v", err)
+	}
+}
+
+func TestOwnerRefreshRequiresDurableResultAndTransientFailureCanRecover(t *testing.T) {
+	clock := &testClock{now: baseTime}
+	home := t.TempDir()
+	path := writeLogin(t, home, "a@example.test", "acct-a", accessToken(t, "expired", baseTime.Add(-time.Hour)), "held-refresh", baseTime)
+	calls := 0
+	cred := newCredential(path, "codex 1", "a@example.test", "acct-a", clock.Now, func(context.Context, string) error {
+		calls++
+		if calls == 1 {
+			return errors.New("owner temporarily unavailable")
+		}
+		if calls == 2 {
+			return nil
+		} // An ACK without a durable replacement is not success.
+		writeLogin(t, home, "a@example.test", "acct-a", accessToken(t, "renewed", clock.now.Add(time.Hour)), "owner-only", clock.now)
+		return nil
+	})
+	cred.accountRef = "selected"
+	for attempt := 1; attempt <= 2; attempt++ {
+		if err := cred.PrepareAccess(context.Background()); err == nil {
+			t.Fatal("accepted missing durable renewal")
+		}
+		if err := cred.PrepareAccess(context.Background()); err == nil {
+			t.Fatal("cooldown accepted expired token")
+		}
+		if calls != attempt {
+			t.Fatalf("calls=%d want %d", calls, attempt)
+		}
+		clock.now = clock.now.Add(time.Minute)
+	}
+	if err := cred.PrepareAccess(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	if calls != 3 {
+		t.Fatalf("calls=%d", calls)
 	}
 }

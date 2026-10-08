@@ -340,8 +340,37 @@ export async function readCodexAccounts(env = process.env) {
     await owner.close();
   }
 }
+// Renewal is an owner operation, never a saved-reader or direct token fallback.
+export async function refreshCodexAccount(input,env=process.env,request=fetch){
+ if(!input||Object.keys(input).some(k=>k!=='accountRef')||!/^[a-zA-Z0-9:._/-]{1,160}$/.test(input.accountRef??''))throw Error('CAPACITY_INVALID_RESPONSE');
+ const state=env.HOPPER_AI_CAPACITY_STATE;if(!isAbsolute(state??''))throw Error('CAPACITY_UNCONFIGURED');
+ const session=JSON.parse(await readFile(join(state,'local-session.json'),'utf8'));
+ const origin=new URL(session.url);
+ if(!['127.0.0.1','localhost','[::1]'].includes(origin.hostname)||!['http:','https:'].includes(origin.protocol)||origin.username||origin.password||!session.token)throw Error('CAPACITY_INVALID_SESSION');
+ const invoke=async(method,path,body)=>{
+  const headers={authorization:'Bearer '+session.token,'content-type':'application/json'};
+  const native=session.kind==='native';
+  const response=await request(new URL(native?'/native/request':path,origin),{method:native?'POST':method,headers,redirect:'error',signal:AbortSignal.timeout(18000),
+   ...(native?{body:JSON.stringify({method,path,...body?{body:JSON.stringify(body)}:{}})}:body?{body:JSON.stringify(body)}:{})});
+  if(!response.ok)throw Error('CAPACITY_OWNER_UNAVAILABLE');
+  const value=await response.json();if(!native)return value;
+  if(value.status!==200)throw Error('CAPACITY_OWNER_UNAVAILABLE');return JSON.parse(value.body);
+ };
+ const before=await invoke('GET','/v1/capacity/status');
+ const selected=before.connections?.filter(c=>c.accountRef===input.accountRef&&c.sourceId?.startsWith('codex:'));
+ if(selected?.length!==1||selected[0].state==='reauth')throw Error('CAPACITY_OWNER_UNAVAILABLE');
+ await invoke('POST','/v1/capacity/connections/retry',input);
+ const after=await invoke('GET','/v1/capacity/status');
+ const verified=after.connections?.find(c=>c.sourceId===selected[0].sourceId&&c.accountRef===input.accountRef);
+ if(verified?.state!=='live'||verified.code)throw Error('CAPACITY_OWNER_UNAVAILABLE');
+ return {schemaVersion:'hopper.gateway-capacity-renewal.v1',renewed:true};
+}
 if (import.meta.main) {
   try {
+    if(process.argv[2]==='codex-refresh'){
+      const input=await Bun.stdin.text();if(input.length>256)throw Error('CAPACITY_INVALID_RESPONSE');
+      console.log(JSON.stringify(await refreshCodexAccount(JSON.parse(input))));process.exit(0);
+    }
     const read =
       process.argv[2] === "codex-accounts" ? readCodexAccounts : readCapacity;
     console.log(JSON.stringify(await read()));

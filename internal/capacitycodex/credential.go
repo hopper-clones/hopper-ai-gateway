@@ -7,9 +7,7 @@ import (
 	"sync"
 	"time"
 
-	codexauth "github.com/router-for-me/CLIProxyAPI/v8/internal/auth/codex"
 	coreauth "github.com/router-for-me/CLIProxyAPI/v8/sdk/cliproxy/auth"
-	log "github.com/sirupsen/logrus"
 )
 
 // Credential states shown in management.
@@ -23,7 +21,6 @@ const (
 	ReasonAuthFileUnreadable = "CAPACITY_CODEX_AUTH_FILE_UNREADABLE"
 	ReasonIdentityMismatch   = "CAPACITY_CODEX_IDENTITY_MISMATCH"
 	ReasonRefreshFailed      = "CAPACITY_CODEX_REFRESH_FAILED"
-	ReasonWriteFailed        = "CAPACITY_CODEX_WRITE_FAILED"
 	ReasonTokenRejected      = "CAPACITY_CODEX_TOKEN_REJECTED"
 )
 
@@ -48,14 +45,17 @@ func unavailable(reason string) *UnavailableError {
 	return &UnavailableError{Reason: reason, status: status}
 }
 
-// RefreshFunc exchanges a refresh token for new tokens (CodexAuth.RefreshTokens).
-type RefreshFunc func(ctx context.Context, refreshToken string) (*codexauth.CodexTokenData, error)
+// RefreshFunc asks the selected Capacity owner to renew through its official client.
+// No token enters or leaves this operation.
+type RefreshFunc func(ctx context.Context, accountRef string) error
 
 // Credential is the Runtime of a registered Capacity Codex auth. It holds the
-// tokens of one official auth.json in memory only, re-reading the file when it
-// changes and refreshing only an expired access token.
+// access credentials of one official auth.json, re-reading when it changes.
+// Refresh credentials and persistence belong exclusively to the official owner.
 type Credential struct {
 	path          string
+	accountRef    string
+	retryAt       time.Time
 	label         string
 	expectedEmail string
 	accountID     string
@@ -128,8 +128,8 @@ func (c *Credential) PrepareAccess(ctx context.Context) error {
 	if err != nil {
 		return c.fail(ReasonAuthFileUnreadable, fileStamp{})
 	}
-	if c.state == StateUnavailable && c.reason == ReasonRefreshFailed && stamp == c.failedStamp {
-		// The same file already failed to refresh; wait for the Codex app to change it.
+	if c.state == StateUnavailable && c.reason == ReasonRefreshFailed && stamp == c.failedStamp && c.now().Before(c.retryAt) {
+		// Cool down transient failures; a newly persisted login can recover sooner.
 		return unavailable(c.reason)
 	}
 	if stamp != c.stamp || c.state != StateReady {
@@ -150,52 +150,27 @@ func (c *Credential) PrepareAccess(ctx context.Context) error {
 	return c.refreshLocked(ctx)
 }
 
-// refreshLocked refreshes the expired tokens and writes them back to the same file.
+// refreshLocked delegates to Capacity. Only the official client writes credentials.
 func (c *Credential) refreshLocked(ctx context.Context) error {
-	failedStamp := c.stamp
-	if c.tokens.RefreshToken == "" || c.refresh == nil {
-		return c.fail(ReasonRefreshFailed, failedStamp)
+	c.retryAt = c.now().Add(time.Minute)
+	if c.refresh == nil || c.accountRef == "" {
+		return c.fail(ReasonRefreshFailed, c.stamp)
 	}
-	data, err := c.refresh(ctx, c.tokens.RefreshToken)
-	if err != nil || data == nil || data.AccessToken == "" {
-		log.Warnf("capacity-codex: %s refresh failed (%s)", c.label, ReasonRefreshFailed)
-		return c.fail(ReasonRefreshFailed, failedStamp)
+	if err := c.refresh(ctx, c.accountRef); err != nil {
+		return c.fail(ReasonRefreshFailed, c.stamp)
 	}
-	next := authTokens{IDToken: data.IDToken, AccessToken: data.AccessToken, RefreshToken: data.RefreshToken, AccountID: data.AccountID}
-	if next.IDToken == "" {
-		next.IDToken = c.tokens.IDToken
+	if err := c.load(); err != nil {
+		return err
 	}
-	if next.RefreshToken == "" {
-		next.RefreshToken = c.tokens.RefreshToken
+	if c.expired() {
+		return c.fail(ReasonRefreshFailed, c.stamp)
 	}
-	if next.AccountID == "" {
-		next.AccountID = c.tokens.AccountID
-	}
-	claims, ok := c.verify(next)
-	if !ok {
-		return c.fail(ReasonIdentityMismatch, failedStamp)
-	}
-	access, errAccess := parseClaims(next.AccessToken)
-	if errAccess != nil || access.Exp <= 0 {
-		return c.fail(ReasonRefreshFailed, failedStamp)
-	}
-	c.tokens, c.claims, c.expiry = next, claims, time.Unix(access.Exp, 0)
-	c.state, c.reason = StateReady, ""
-	if errWrite := writeAuthFile(c.path, next, c.now()); errWrite != nil {
-		// The new tokens stay in memory so the account keeps serving.
-		log.Warnf("capacity-codex: %s refreshed but the login file was not updated (%s)", c.label, ReasonWriteFailed)
-		c.reason = ReasonWriteFailed
-		return nil
-	}
-	if stamp, errStat := statStamp(c.path); errStat == nil {
-		c.stamp = stamp
-	}
-	log.Infof("capacity-codex: %s access token refreshed and written back", c.label)
+	c.retryAt = time.Time{}
 	return nil
 }
 
 // RefreshRejected handles an upstream 401: it re-reads the file and refreshes
-// only an expired token; a rejected token that is not expired is not refreshed.
+// through the selected owner; the owner applies its bounded recovery policy.
 func (c *Credential) RefreshRejected(ctx context.Context) error {
 	c.mu.Lock()
 	rejected := c.tokens.AccessToken
@@ -203,16 +178,22 @@ func (c *Credential) RefreshRejected(ctx context.Context) error {
 		c.mu.Unlock()
 		return err
 	}
-	if c.tokens.AccessToken != rejected {
+	if c.tokens.AccessToken != rejected && !c.expired() {
 		c.mu.Unlock()
 		return nil
 	}
-	if c.expired() {
-		defer c.mu.Unlock()
-		return c.refreshLocked(ctx)
-	}
 	defer c.mu.Unlock()
-	return c.fail(ReasonTokenRejected, c.stamp)
+	if c.now().Before(c.retryAt) {
+		return unavailable(ReasonTokenRejected)
+	}
+	if err := c.refreshLocked(ctx); err != nil {
+		return err
+	}
+	if c.tokens.AccessToken == rejected {
+		c.retryAt = c.now().Add(time.Minute)
+		return c.fail(ReasonTokenRejected, c.stamp)
+	}
+	return nil
 }
 
 // AccessToken returns the current access token held in memory.

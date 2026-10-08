@@ -29,7 +29,7 @@ go build -o test-output ./cmd/server && rm test-output # Verify compile (REQUIRE
 - `make build` packages the console and builds the gateway; `make verify` runs frontend and Go checks.
 - Serve only the bundled `/management.html` console; do not add a second gateway app or fetch an upstream replacement.
 - Preserve source provenance in `docs/THEO-REFACTOR.md`; test replay is synthetic and never production credential data.
-- The usage feed (`sdk/cliproxy/usage/feed`, `docs/USAGE-FEED.md`) and lane keys (`access.lane-keys`) are the gateway's accounting contract; the Capacity bridge child process has a 20 s deadline and a scrubbed environment. `credentials.capacity-codex` registers Capacity's Codex logins in place (`internal/capacitycodex`); it reads and refreshes each official `auth.json` and never copies tokens.
+- The usage feed (`sdk/cliproxy/usage/feed`, `docs/USAGE-FEED.md`) and lane keys (`access.lane-keys`) are the gateway's accounting contract; the Capacity bridge child process has a 20 s deadline and a scrubbed environment. `credentials.capacity-codex` registers Capacity's Codex logins in place (`internal/capacitycodex`); it reads access credentials in place and delegates renewal to the selected Capacity owner; it never reads refresh tokens or writes `auth.json`. See `docs/CAPACITY-CREDENTIAL-RECOVERY.md`.
 
 ## Architecture
 - `cmd/server/` — Server entrypoint
