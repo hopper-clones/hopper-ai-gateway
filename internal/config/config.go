@@ -75,6 +75,9 @@ type Config struct {
 	// UsageFeed configures the append-only usage feed consumed by AI Capacity.
 	UsageFeed UsageFeedConfig `yaml:"usage-feed,omitempty" json:"usage-feed,omitempty"`
 
+	// CapacityCodex registers the Codex logins AI Capacity tracks as credentials.
+	CapacityCodex CapacityCodexConfig `yaml:"capacity-codex,omitempty" json:"capacity-codex,omitempty"`
+
 	// DisableCooling disables auth/model cooldown scheduling when true unless a credential or provider overrides it.
 	DisableCooling bool `yaml:"disable-cooling" json:"disable-cooling"`
 
