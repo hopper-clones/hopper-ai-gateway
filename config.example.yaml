@@ -144,6 +144,14 @@ access:
 #     max-details: 10000
 #     max-string-bytes: 256
 #     staging-retention: 1m
+#
+#   # Register the Codex logins Hopper AI Capacity tracks, reading each official
+#   # <codex home>/auth.json in place (see docs/AI-CAPACITY-INTEGRATION.md).
+#   # Needs the HOPPER_AI_CAPACITY_* reader environment. Changing it requires a restart.
+#
+#   capacity-codex:
+#     enabled: false
+#     refresh-seconds: 300
 
 # Routing strategy for selecting credentials when multiple match.
 routing:

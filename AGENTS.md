@@ -29,7 +29,7 @@ go build -o test-output ./cmd/server && rm test-output # Verify compile (REQUIRE
 - `make build` packages the console and builds the gateway; `make verify` runs frontend and Go checks.
 - Serve only the bundled `/management.html` console; do not add a second gateway app or fetch an upstream replacement.
 - Preserve source provenance in `docs/THEO-REFACTOR.md`; test replay is synthetic and never production credential data.
-- The usage feed (`sdk/cliproxy/usage/feed`, `docs/USAGE-FEED.md`) and lane keys (`access.lane-keys`) are the gateway's accounting contract; the Capacity bridge child process has a 20 s deadline and a scrubbed environment.
+- The usage feed (`sdk/cliproxy/usage/feed`, `docs/USAGE-FEED.md`) and lane keys (`access.lane-keys`) are the gateway's accounting contract; the Capacity bridge child process has a 20 s deadline and a scrubbed environment. `credentials.capacity-codex` registers Capacity's Codex logins in place (`internal/capacitycodex`); it reads and refreshes each official `auth.json` and never copies tokens.
 
 ## Architecture
 - `cmd/server/` — Server entrypoint
@@ -66,7 +66,7 @@ go build -o test-output ./cmd/server && rm test-output # Verify compile (REQUIRE
 - Wrap defer errors: `defer func() { if err := f.Close(); err != nil { log.Errorf(...) } }()`
 - Use logrus structured logging; avoid leaking secrets/tokens in logs
 - Avoid panics in HTTP handlers; prefer logged errors and meaningful HTTP status codes
-- Timeouts are allowed only during credential acquisition; after an upstream connection is established, do not set timeouts for any subsequent network behavior. Intentional exceptions that must remain allowed are the Codex websocket liveness deadlines in `internal/runtime/executor/codex_websockets_executor.go`, the wsrelay session deadlines in `internal/wsrelay/session.go`, the management APICall timeout in `internal/api/handlers/management/api_tools.go`, the `cmd/fetch_antigravity_models` utility timeouts, and the 20 s child-process deadline on the Capacity reader in `internal/api/handlers/management/capacity_bridge.go` (a local process, not an upstream connection)
+- Timeouts are allowed only during credential acquisition; after an upstream connection is established, do not set timeouts for any subsequent network behavior. Intentional exceptions that must remain allowed are the Codex websocket liveness deadlines in `internal/runtime/executor/codex_websockets_executor.go`, the wsrelay session deadlines in `internal/wsrelay/session.go`, the management APICall timeout in `internal/api/handlers/management/api_tools.go`, the `cmd/fetch_antigravity_models` utility timeouts, and the 20 s child-process deadlines on the Capacity reader in `internal/api/handlers/management/capacity_bridge.go` and `internal/capacitycodex/reader.go` (local processes, not upstream connections)
 - Avoid wall-clock `time.Sleep` in TTL, expiration, ordering, or cache-eviction unit tests due to platform timer granularity (e.g. Windows default timer resolution of ~15.6ms) and CI jitter under load; prefer controllable clocks (`nowFunc` / mock clock), explicit timestamp manipulation, or deterministic synchronization primitives.
 - Note: if modifying features that involve CLIProxyAPIHome, check if corresponding updates are needed in the CLIProxyAPIHome repository.
 - Endpoints under the `/v0/management` base URL are deprecated and no longer maintained. For any feature changes, do not modify endpoints under `/v0/management` unless necessary to fix compilation errors.
