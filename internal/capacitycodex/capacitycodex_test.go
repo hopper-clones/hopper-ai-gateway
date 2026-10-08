@@ -315,7 +315,7 @@ func TestExpiredTokenDelegatesToOwnerAndReloadsItsDurableResult(t *testing.T) {
 	}
 }
 
-func TestRefreshRejectedDoesNotRefreshUnexpiredToken(t *testing.T) {
+func TestRefreshRejectedWaitsForOwnerReplacement(t *testing.T) {
 	clock := &testClock{now: baseTime}
 	home := t.TempDir()
 	writeLogin(t, home, "a@example.test", "acct-a", accessToken(t, "a", baseTime.Add(time.Hour)), "refresh-a", baseTime)
@@ -323,6 +323,15 @@ func TestRefreshRejectedDoesNotRefreshUnexpiredToken(t *testing.T) {
 	var unavailableErr *UnavailableError
 	if err := cred.RefreshRejected(context.Background()); !errors.As(err, &unavailableErr) || unavailableErr.Reason != ReasonTokenRejected || unavailableErr.StatusCode() != 401 {
 		t.Fatalf("err = %v", err)
+	}
+	if err := cred.PrepareAccess(context.Background()); err == nil {
+		t.Fatal("reused a rejected token during cooldown")
+	}
+	if err := cred.RefreshRejected(context.Background()); err == nil {
+		t.Fatal("repeated rejected renewal escaped cooldown")
+	}
+	if err := cred.PrepareAccess(context.Background()); err == nil {
+		t.Fatal("repeated rejection cleared the cooldown")
 	}
 	// After the app rewrites the login, the new token is used.
 	next := accessToken(t, "b", baseTime.Add(2*time.Hour))

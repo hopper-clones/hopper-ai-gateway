@@ -128,7 +128,7 @@ func (c *Credential) PrepareAccess(ctx context.Context) error {
 	if err != nil {
 		return c.fail(ReasonAuthFileUnreadable, fileStamp{})
 	}
-	if c.state == StateUnavailable && c.reason == ReasonRefreshFailed && stamp == c.failedStamp && c.now().Before(c.retryAt) {
+	if c.state == StateUnavailable && (c.reason == ReasonRefreshFailed || c.reason == ReasonTokenRejected) && stamp == c.failedStamp && c.now().Before(c.retryAt) {
 		// Cool down transient failures; a newly persisted login can recover sooner.
 		return unavailable(c.reason)
 	}
@@ -184,7 +184,7 @@ func (c *Credential) RefreshRejected(ctx context.Context) error {
 	}
 	defer c.mu.Unlock()
 	if c.now().Before(c.retryAt) {
-		return unavailable(ReasonTokenRejected)
+		return c.fail(ReasonTokenRejected, c.stamp)
 	}
 	if err := c.refreshLocked(ctx); err != nil {
 		return err
