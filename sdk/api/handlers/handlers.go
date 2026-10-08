@@ -229,6 +229,9 @@ func requestExecutionMetadata(ctx context.Context) map[string]any {
 	if pinnedAuthID := pinnedAuthIDFromContext(ctx); pinnedAuthID != "" {
 		meta[coreexecutor.PinnedAuthMetadataKey] = pinnedAuthID
 	}
+	if lane := requestLane(ginCtx); lane != "" {
+		meta[coreexecutor.LaneMetadataKey] = lane
+	}
 	if selectedCallback := selectedAuthIDCallbackFromContext(ctx); selectedCallback != nil {
 		meta[coreexecutor.SelectedAuthCallbackMetadataKey] = selectedCallback
 	}
@@ -247,6 +250,22 @@ func requestExecutionMetadata(ctx context.Context) map[string]any {
 		meta[coreexecutor.DisallowFreeAuthMetadataKey] = true
 	}
 	return meta
+}
+
+// requestLane reads the lane the lane key access provider stored on the request.
+func requestLane(ginCtx *gin.Context) string {
+	if ginCtx == nil {
+		return ""
+	}
+	raw, exists := ginCtx.Get("accessMetadata")
+	if !exists {
+		return ""
+	}
+	metadata, ok := raw.(map[string]string)
+	if !ok {
+		return ""
+	}
+	return strings.TrimSpace(metadata["lane"])
 }
 
 func requestClientIP(request *http.Request) string {

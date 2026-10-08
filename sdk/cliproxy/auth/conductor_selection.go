@@ -1993,6 +1993,9 @@ func (m *Manager) pickNext(ctx context.Context, provider, model string, opts cli
 		auth, exec, _, err := m.pickNextViaHome(ctx, model, opts, tried)
 		return auth, exec, err
 	}
+	if auth, executor, ok := m.pickLanePinned(ctx, provider, model, opts, tried); ok {
+		return auth, executor, nil
+	}
 	opts.Metadata[cliproxyexecutor.SessionAffinityProviderMetadataKey] = provider
 	opts.Metadata[cliproxyexecutor.SessionAffinityModelMetadataKey] = model
 
@@ -2165,6 +2168,9 @@ func (m *Manager) pickNextMixed(ctx context.Context, providers []string, model s
 	opts.EnsureMetadata()
 	if m.HomeEnabled() {
 		return m.pickNextViaHome(ctx, model, opts, tried)
+	}
+	if auth, executor, provider, ok := m.pickLanePinnedMixed(ctx, providers, model, opts, tried); ok {
+		return auth, executor, provider, nil
 	}
 	opts.Metadata[cliproxyexecutor.SessionAffinityProviderMetadataKey] = "mixed"
 	opts.Metadata[cliproxyexecutor.SessionAffinityModelMetadataKey] = model

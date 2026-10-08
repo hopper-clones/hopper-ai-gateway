@@ -20,8 +20,8 @@ type pickWindow struct {
 
 // PostRoutingPick serves POST /routing/pick {model, lane}. It runs the manager's
 // read-only selection path (PeekAuth) for the model: nothing is executed and no
-// rotation, credit or session state moves. Lane is echoed for the caller's
-// trace; selection itself is lane-agnostic.
+// rotation, credit or session state moves. A pinned lane prefers its pinned
+// credential, exactly as request selection does.
 func (h *Handler) PostRoutingPick(c *gin.Context) {
 	if h == nil || h.authManager == nil {
 		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "core auth manager unavailable"})
@@ -51,7 +51,8 @@ func (h *Handler) PostRoutingPick(c *gin.Context) {
 		lastErr  error
 	)
 	for _, candidate := range providers {
-		auth, err := h.authManager.PeekAuth(c.Request.Context(), candidate, body.Model, cliproxyexecutor.Options{})
+		opts := cliproxyexecutor.Options{Metadata: map[string]any{cliproxyexecutor.LaneMetadataKey: strings.TrimSpace(body.Lane)}}
+		auth, err := h.authManager.PeekAuth(c.Request.Context(), candidate, body.Model, opts)
 		if err == nil && auth != nil {
 			selected, provider = auth, candidate
 			break
@@ -81,6 +82,9 @@ func (h *Handler) PostRoutingPick(c *gin.Context) {
 			}
 		}
 		windows = append(windows, view)
+	}
+	if pinned := h.authManager.LanePinnedAuthID(body.Lane); pinned != "" && pinned == selected.ID {
+		reason = "pinned"
 	}
 	var accountHash *string
 	if kind, value := selected.AccountInfo(); kind == "oauth" {

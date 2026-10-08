@@ -125,7 +125,13 @@ func (m *Manager) PeekAuth(ctx context.Context, provider, model string, opts cli
 	if m != nil && m.HomeEnabled() {
 		return nil, &Error{Code: "home_unavailable", Message: "legacy auth selection is unavailable while Home is enabled", HTTPStatus: http.StatusServiceUnavailable}
 	}
-	selected, _, errPick := m.pickNextLegacy(withPeekOnly(ctx), provider, model, opts, nil)
+	peekCtx := withPeekOnly(ctx)
+	if pinned, ok := m.lanePinnedOptions(opts, nil); ok {
+		if selected, _, errPinned := m.pickNextLegacy(peekCtx, provider, model, pinned, nil); errPinned == nil && selected != nil {
+			return selected, nil
+		}
+	}
+	selected, _, errPick := m.pickNextLegacy(peekCtx, provider, model, opts, nil)
 	if errPick != nil {
 		return nil, errPick
 	}

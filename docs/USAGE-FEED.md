@@ -73,6 +73,10 @@ socket peer must be loopback (forwarded headers do not count), exactly like
 | `/lane-keys` | GET | | `{"lane_keys":[{"id","key_id","lane","project","task","expires_at"}]}` — never the key |
 | `/lane-keys/:id` | DELETE | | `{"status":"ok"}` or 404 |
 | `/routing/pick` | POST | `{"model","lane"}` | `{"auth_id","account_hash","provider","model","lane","reason","windows":[{"scope","resets_at","exhausted"}]}` |
+| `/routing/lanes` | GET | `since=` (RFC 3339; default 48 h back) | `{"read_at","since","today","strategy","truncated","lanes":[{"lane","project","task","state","account","on_since","last_request_at","last_status","requests_today","tokens_today","served_today":[{"account","from","to","requests"}],"pin","keys":[{"id","key_id","expires_at"}]}]}` |
+| `/routing/swaps` | GET | `since=` (RFC 3339; default 7 days back) | `{"read_at","since","truncated","swaps":[{"at","lane","project","task","from","to","reason","scope","resets_at"}]}` |
+| `/routing/lanes/:lane/pin` | PUT | `{"account":"<gateway auth id>"}` | `{"status":"ok","lane","account","pinned_at"}`; 404 `ROUTING_UNKNOWN_ACCOUNT` |
+| `/routing/lanes/:lane/pin` | DELETE | | `{"status":"ok","lane"}`; 404 `ROUTING_NOT_PINNED` |
 
 The cursor is opaque: `"<file>:<byte offset>"`. A reader that stops on a partially
 written last line gets the same cursor back and continues once the line is complete.
@@ -81,9 +85,37 @@ A cursor naming a retired file resumes at the next retained file.
 `/routing/pick` runs the manager's read-only selection path (`PeekAuth`) for the
 model: the configured selector answers without advancing round-robin state,
 spending weighted credits or binding a session, and nothing is executed. `reason` is
-`earliest-reset` when the chosen credential has a fresh, unexhausted window with a
-future reset, otherwise `stable-order`. `lane` is echoed for the caller's trace;
-selection is lane-agnostic.
+`pinned` when the lane is pinned to the chosen credential, `earliest-reset` when the
+chosen credential has a fresh, unexhausted window with a future reset, otherwise
+`stable-order`. A lane's pin is honoured as in request selection.
+
+## Lanes, swaps and pins
+
+`/routing/lanes` and `/routing/swaps` are derived from the feed and the lane keys;
+the gateway keeps no routing history of its own. They are gated like the feed
+(loopback peer, feed enabled).
+
+- A lane is every lane named by an unexpired lane key, a usage event in the window,
+  or a pin. `account` is the account of the lane's last usage event; `on_since` is
+  when that run of consecutive requests on the same account began. `requests_today`,
+  `tokens_today` and `served_today` count from the gateway host's local midnight.
+- An account is `{"auth_id","account_hash","label","provider"}`. `label` is the
+  Capacity label (`capacity_label` attribute of a Capacity-registered credential)
+  when known, otherwise null. No email is answered.
+- `state` is one word: `served`, `failing` (the last request errored), `idle` (no
+  request in the window) or `pinned-out`.
+- A swap is two consecutive usage events of one lane on different accounts. Its
+  `reason` is, in order: `pinned` (the lane was pinned to the new account between
+  the two requests), `exhausted-window` (the latest quota observation of the old
+  account had an exhausted window not yet reset; `scope` and `resets_at` name it),
+  `unavailable` (the old account's last request errored), `reset-first` (the
+  strategy moved it), otherwise null.
+- A pin (`routing.lane-pins`: `lane`, `auth-id`, `pinned-at`) is a preference, not
+  a lock: selection tries the pinned credential first and, when it is cooling down,
+  exhausted, does not serve the model or was already tried for this request, falls
+  back to the configured strategy. The lane then reports `pin.out: true` with
+  `out_why` and `out_until`, and `state: "pinned-out"`. `/routing/pick` honours pins
+  the same way.
 
 Lane keys are persisted in `access.lane-keys` through the same config writer as
 `access.api-keys`, so a hot reload picks them up. Expired keys are refused at auth

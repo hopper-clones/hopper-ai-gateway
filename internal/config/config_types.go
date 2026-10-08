@@ -371,6 +371,10 @@ type RoutingConfig struct {
 	// When false, subagents are distributed across the credential pool via the fallback selector.
 	// Default: true. Ignored when SessionAffinity is false.
 	SessionAffinitySubagents *bool `yaml:"session-affinity-subagents,omitempty" json:"session-affinity-subagents,omitempty"`
+
+	// LanePins prefer one credential for every request of a lane. A pinned
+	// credential that cannot serve the request falls back to normal selection.
+	LanePins []LanePin `yaml:"lane-pins,omitempty" json:"lane-pins,omitempty"`
 }
 
 // OAuthModelAlias defines a model ID alias for a specific channel.

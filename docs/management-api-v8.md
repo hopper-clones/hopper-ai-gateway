@@ -95,6 +95,9 @@ retain the corresponding business operation's fields.
 | `/routing/pick` | POST | Select the credential for a model without executing (see `USAGE-FEED.md`). |
 | `/lane-keys` | GET, POST | List or issue expiring lane keys; the key is returned once. |
 | `/lane-keys/<id>` | DELETE | Revoke a lane key. |
+| `/routing/lanes` | GET | Each lane: the account serving it now, since when, today's requests and accounts, its pin and its keys (see `USAGE-FEED.md`). |
+| `/routing/swaps` | GET | Every move of a lane from one account to another since `since=`, newest first, with its reason. |
+| `/routing/lanes/<lane>/pin` | PUT, DELETE | Pin a lane to a credential (`{"account":"<auth id>"}`) or unpin it. |
 | `/usage/feed` | GET | Read the usage feed from a cursor (loopback only). |
 | `/usage/feed/ack` | POST | Persist a consumer's acked cursor. |
 | `/usage/feed/cursors` | GET | List acked cursors. |
