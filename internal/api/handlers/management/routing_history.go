@@ -23,6 +23,7 @@ const routingScanCap = 500000
 
 // feedLine is the part of a usage or quota event routing reads.
 type feedLine struct {
+	TokenStatus string     `json:"token_status"`
 	Kind        string     `json:"kind"`
 	At          feed.Time  `json:"at"`
 	Lane        string     `json:"lane"`
@@ -53,13 +54,14 @@ type laneRun struct {
 
 // laneHistory is what the feed says about one lane.
 type laneHistory struct {
-	lane     string
-	project  string
-	task     string
-	runs     []laneRun
-	last     feedLine
-	requests int
-	tokens   int64
+	lane                          string
+	project                       string
+	task                          string
+	runs                          []laneRun
+	last                          feedLine
+	requests                      int
+	tokens                        int64
+	partial, unavailable, invalid int
 }
 
 // routingSwap is one move of a lane from one account to another.
@@ -138,6 +140,18 @@ func deriveRoutingHistory(lines []feedLine, countFrom time.Time, routing config.
 			if !line.at().Before(countFrom) {
 				entry.requests++
 				entry.tokens += line.Tokens.Total
+				switch line.TokenStatus {
+				case feed.TokensPartial:
+					entry.partial++
+				case feed.TokensUnavailable:
+					entry.unavailable++
+				case feed.TokensInvalid:
+					entry.invalid++
+				case "":
+					if line.Tokens.Total == 0 {
+						entry.unavailable++
+					} // v1 cannot prove measured zero.
+				}
 			}
 		}
 		if line.AccountID != "" {

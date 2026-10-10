@@ -251,6 +251,10 @@ func EnsureTokenBreakdown(detail Detail) Detail {
 // direct SDK usage details using the known provider's token semantics. Unknown
 // providers remain unclassified instead of guessing how their buckets overlap.
 func EnsureTokenBreakdownForProvider(detail Detail, provider, executorType string) Detail {
+	// Normalizing an absent measurement must not manufacture evidence of zero.
+	if !detail.TokenEvidence.Known && !HasTokenMeasurement(detail) {
+		detail.TokenEvidence.Known = true
+	}
 	if !detail.TokenBreakdown.Valid() {
 		semantics := tokenAccountingSemanticsFor(provider, executorType)
 		if detail.CacheReadTokens == 0 && detail.CachedTokens > 0 && detail.InputTokens == 0 &&

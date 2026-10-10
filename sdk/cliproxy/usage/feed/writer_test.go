@@ -176,14 +176,16 @@ func TestUsageEventJSONMatchesContract(t *testing.T) {
 	ev.Lane, ev.Project, ev.Task = "lane-test", "project:822b", "task:a929eb4f"
 	ev.AccountID = "auth-1"
 	ev.Provider, ev.Model, ev.Effort = "claude", "claude-fable-5-1", "high"
-	ev.Tokens = Tokens{Input: 10, CachedInput: 4, CacheWrite: 1, Output: 5, Reasoning: 2, Total: 15}
+	ev.Tokens = &Tokens{Input: 10, CachedInput: 4, CacheWrite: 1, Output: 5, Reasoning: 2, Total: 15}
+	ev.TokenStatus = TokensComplete
+	ev.TokenFields = []string{"input", "output", "total"}
 	ev.LatencyMS = 42
 	ev.Status = "ok"
 	raw, err := json.Marshal(ev)
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := `{"v":1,"id":"abc","at":"2026-10-07T12:00:00.000Z","kind":"usage","key_id":"0123456789abcdef","lane":"lane-test","project":"project:822b","task":"task:a929eb4f","account_id":"auth-1","account_hash":null,"provider":"claude","model":"claude-fable-5-1","effort":"high","tokens":{"input":10,"cached_input":4,"cache_write":1,"output":5,"reasoning":2,"total":15},"latency_ms":42,"cache_hit":null,"status":"ok"}`
+	want := `{"v":2,"id":"abc","at":"2026-10-07T12:00:00.000Z","kind":"usage","key_id":"0123456789abcdef","lane":"lane-test","project":"project:822b","task":"task:a929eb4f","account_id":"auth-1","account_hash":null,"provider":"claude","model":"claude-fable-5-1","effort":"high","tokens":{"input":10,"cached_input":4,"cache_write":1,"output":5,"reasoning":2,"total":15,"unclassified":0},"token_status":"complete","token_fields":["input","output","total"],"latency_ms":42,"cache_hit":null,"status":"ok"}`
 	if string(raw) != want {
 		t.Fatalf("usage json\n got %s\nwant %s", raw, want)
 	}

@@ -1,9 +1,10 @@
-# Usage feed `hopper.gateway-usage.v1`
+# Usage feed: v2 usage, v1 quota
 
 The gateway is the only writer of the fact "a request happened". It records that
-fact in an append-only JSONL feed that AI Capacity (and only Capacity) pulls over
-the loopback management API. Nothing else in the estate parses transcripts for
-tokens once this feed is live.
+fact in an append-only JSONL feed that AI Capacity pulls over the loopback
+management API. This feed covers requests routed through this gateway. Local
+client history and provider account reports have separate coverage; this feed
+does not prove their requests were observed.
 
 ## Files
 
@@ -23,14 +24,20 @@ tokens once this feed is live.
 
 ## Events
 
-Usage, one per completed upstream request (`status` is `ok` or `error`):
+Usage v2, one per completed upstream attempt (`status` is `ok` or `error`),
+including failed attempts and responses without usage. Install a v2-capable
+consumer before restarting an upgraded producer. Historical v1 events remain
+readable; v1 all-zero counters cannot distinguish measured zero from absent usage.
+A consumer encountering an unsupported version must stop without committing or
+acknowledging that page.
 
 ```json
-{"v":1,"id":"<gateway request id>","at":"2026-10-07T12:00:00.000Z","kind":"usage",
+{"v":2,"id":"<gateway request id>","at":"2026-10-07T12:00:00.000Z","kind":"usage",
  "key_id":"<first 16 hex of sha256(api key)>","lane":"lane-a","project":"project:822b","task":"task:a929eb4f",
  "account_id":"<gateway auth id>","account_hash":"<sha256 of lowercased account email, or null>",
  "provider":"claude","model":"claude-fable-5-1","effort":"high",
- "tokens":{"input":0,"cached_input":0,"cache_write":0,"output":0,"reasoning":0,"total":0},
+ "tokens":{"input":0,"cached_input":0,"cache_write":0,"output":0,"reasoning":0,"total":0,"unclassified":0},
+ "token_status":"complete","token_fields":["input","output"],
  "latency_ms":0,"cache_hit":null,"status":"ok"}
 ```
 
@@ -47,12 +54,28 @@ Rules:
 - `cached_input` is already inside `input`; `reasoning` is already inside `output`. Never add them again.
 - Tokens are normalized from the gateway's token-accounting breakdown, not copied from
   provider counters: `input = uncached + cache_read + cache_write`, `output = non_reasoning +
-  reasoning`, `total = input + output`, for every provider (Anthropic's `input_tokens`
-  excludes cache reads, OpenAI's `prompt_tokens` includes them). An event whose breakdown
-  cannot satisfy this is dropped and counted; its quota events are still written.
+  reasoning`, `total = input + output + unclassified`, for every provider (Anthropic's `input_tokens`
+  excludes cache reads, OpenAI's `prompt_tokens` includes them).
+- `token_status` is `complete`, `partial`, `unavailable`, or `invalid`. For unavailable
+  or invalid measurements, `tokens` is null. The request outcome is still retained.
+  Reported zero input/output is a complete measurement, including on a failed request.
+- Partial measurements retain proven non-overlapping buckets and an unclassified
+  remainder when a reported total establishes it. They are lower bounds when totals
+  are missing. `token_fields` lists normalized `input`, `output`, and `total` totals
+  backed by native fields (or the existing complete direct-SDK contract). A partial
+  bucket's zero is not proof that the missing native field was reported as zero.
+  Never add the partial total to its component buckets again.
+- Malformed native numbers and inconsistent arithmetic produce `invalid`, rather
+  than coercing strings/null/fractions into a measurement. Quota windows remain
+  independent of measurement availability.
 - `lane`, `project`, `task` come from the lane key that authenticated the request;
   plain `access.api-keys` give empty strings.
-- `account_hash` is the only account identity that leaves the gateway. No email is in the feed.
+- `account_id` is the selected Gateway auth ID; `account_hash` is an optional email
+  hash. No email is in the feed. Capacity-owned Codex IDs are
+  `capacity-codex-` plus the first 24 lowercase hex characters of SHA-256(accountRef).
+  This distinguishes Personal/Business subscriptions sharing an email. Consumers
+  bind only known active IDs and reject conflicting provider/email evidence; an
+  unknown owned ID must not fall back to an email or manual-source guess.
 - `cache_hit` is `null` until the response reported input tokens.
 - `utilization` is a fraction (Codex `used-percent` is divided by 100).
 
@@ -99,6 +122,9 @@ the gateway keeps no routing history of its own. They are gated like the feed
   or a pin. `account` is the account of the lane's last usage event; `on_since` is
   when that run of consecutive requests on the same account began. `requests_today`,
   `tokens_today` and `served_today` count from the gateway host's local midnight.
+  `tokens_today` includes only available measurements and partial lower bounds;
+  `partial_usage_today`, `unavailable_usage_today`, and `invalid_usage_today` expose
+  incomplete coverage. Historical v1 zero events count as unavailable.
 - An account is `{"auth_id","account_hash","label","provider"}`. `label` is the
   Capacity label (`capacity_label` attribute of a Capacity-registered credential)
   when known, otherwise null. No email is answered.

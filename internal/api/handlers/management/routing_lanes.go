@@ -55,19 +55,22 @@ type lanePinView struct {
 }
 
 type laneView struct {
-	Lane          string              `json:"lane"`
-	Project       string              `json:"project"`
-	Task          string              `json:"task"`
-	State         string              `json:"state"`
-	Account       *routingAccountView `json:"account"`
-	OnSince       *string             `json:"on_since"`
-	LastRequestAt *string             `json:"last_request_at"`
-	LastStatus    *string             `json:"last_status"`
-	RequestsToday int                 `json:"requests_today"`
-	TokensToday   int64               `json:"tokens_today"`
-	ServedToday   []laneRunView       `json:"served_today"`
-	Pin           *lanePinView        `json:"pin"`
-	Keys          []laneKeyRef        `json:"keys"`
+	Lane                  string              `json:"lane"`
+	Project               string              `json:"project"`
+	Task                  string              `json:"task"`
+	State                 string              `json:"state"`
+	Account               *routingAccountView `json:"account"`
+	OnSince               *string             `json:"on_since"`
+	LastRequestAt         *string             `json:"last_request_at"`
+	LastStatus            *string             `json:"last_status"`
+	RequestsToday         int                 `json:"requests_today"`
+	PartialUsageToday     int                 `json:"partial_usage_today"`
+	UnavailableUsageToday int                 `json:"unavailable_usage_today"`
+	InvalidUsageToday     int                 `json:"invalid_usage_today"`
+	TokensToday           int64               `json:"tokens_today"`
+	ServedToday           []laneRunView       `json:"served_today"`
+	Pin                   *lanePinView        `json:"pin"`
+	Keys                  []laneKeyRef        `json:"keys"`
 }
 
 type swapView struct {
@@ -257,6 +260,7 @@ func (h *Handler) fillLaneFromHistory(view *laneView, entry *laneHistory, daySta
 	view.LastRequestAt = stringPtr(rfc3339(entry.last.at()))
 	view.LastStatus = stringPtr(entry.last.Status)
 	view.RequestsToday, view.TokensToday = entry.requests, entry.tokens
+	view.PartialUsageToday, view.UnavailableUsageToday, view.InvalidUsageToday = entry.partial, entry.unavailable, entry.invalid
 	for _, run := range entry.runs {
 		if run.to.Before(dayStart) {
 			continue

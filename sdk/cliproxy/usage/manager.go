@@ -91,6 +91,9 @@ type Detail struct {
 	CacheCreationTokens int64
 	TotalTokens         int64
 	TokenBreakdown      TokenBreakdown
+	// TokenEvidence distinguishes reported zero counters from absent fields.
+	// Legacy SDK callers may leave it unset; native parsers retain field presence.
+	TokenEvidence       TokenEvidence
 	ResponseServiceTier string
 }
 

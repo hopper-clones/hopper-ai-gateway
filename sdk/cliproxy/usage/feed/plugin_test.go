@@ -116,7 +116,7 @@ func TestPluginEmitsUsageAndQuotaEvents(t *testing.T) {
 	if first.Provider != "claude" || first.Model != "claude-fable-5-1" || first.Effort != "high" || first.Status != "ok" || first.LatencyMS != 1500 {
 		t.Fatalf("usage request fields = %+v", first)
 	}
-	if first.Tokens != (Tokens{Input: 145, CachedInput: 40, CacheWrite: 5, Output: 20, Reasoning: 8, Total: 165}) {
+	if *first.Tokens != (Tokens{Input: 145, CachedInput: 40, CacheWrite: 5, Output: 20, Reasoning: 8, Total: 165}) {
 		t.Fatalf("usage tokens = %+v", first.Tokens)
 	}
 	if first.CacheHit == nil || !*first.CacheHit {
@@ -150,7 +150,7 @@ func TestPluginEmitsUsageAndQuotaEvents(t *testing.T) {
 	if second.Lane != "" || second.Project != "" || second.Task != "" || second.KeyID != KeyID("plain-key") {
 		t.Fatalf("plain key identity = %+v", second)
 	}
-	if second.AccountHash != nil || second.CacheHit != nil || second.Status != "error" || second.Tokens.Total != 0 {
+	if second.AccountHash != nil || second.CacheHit != nil || second.Status != "error" || second.Tokens != nil || second.TokenStatus != TokensUnavailable {
 		t.Fatalf("failed request = %+v", second)
 	}
 }

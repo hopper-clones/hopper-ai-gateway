@@ -34,11 +34,11 @@ func ParsePluginExecutorResponseUsage(protocol string, payload []byte) usage.Det
 // response.usage must not hide the completed object's token counts.
 func parseResponsesPluginExecutorUsage(payload []byte) usage.Detail {
 	detail, ok := ParseCodexUsage(payload)
-	if ok && hasNonZeroTokenUsage(detail) {
+	if ok && usage.HasTokenMeasurement(detail) {
 		return detail
 	}
 	openAIDetail := ParseOpenAIUsage(payload)
-	if hasNonZeroTokenUsage(openAIDetail) {
+	if usage.HasTokenMeasurement(openAIDetail) {
 		if openAIDetail.ResponseServiceTier == "" {
 			openAIDetail.ResponseServiceTier = detail.ResponseServiceTier
 		}
@@ -85,7 +85,7 @@ func ObservePluginExecutorStreamUsage(protocol string, payload []byte, buffer *S
 			if jsonBytes := ExtractStreamJSONPayload(line); len(jsonBytes) > 0 {
 				// A service tier without response.usage is not token usage. Fall through
 				// so a completed Responses object's top-level usage is still recorded.
-				if detail, ok := ParseCodexUsage(jsonBytes); ok && hasNonZeroTokenUsage(detail) {
+				if detail, ok := ParseCodexUsage(jsonBytes); ok && usage.HasTokenMeasurement(detail) {
 					buffer.Observe(detail, true)
 					return
 				}
@@ -162,6 +162,9 @@ func ObserveMergedStreamUsage(buffer *StreamUsageBuffer, update usage.Detail) {
 
 // MergeStreamUsageDetail merges existing stream usage with a newer update.
 func MergeStreamUsageDetail(existing, update usage.Detail) usage.Detail {
+	if existing.TokenEvidence.Known && update.TokenEvidence.Known {
+		return mergeReportedUsage(existing, update)
+	}
 	merged := update
 	if merged.InputTokens == 0 && existing.InputTokens > 0 {
 		merged.InputTokens = existing.InputTokens

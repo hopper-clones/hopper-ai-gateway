@@ -862,7 +862,7 @@ func (b *StreamUsageBuffer) Observe(detail usage.Detail, ok bool) {
 		return
 	}
 	responseServiceTier := strings.TrimSpace(detail.ResponseServiceTier)
-	if responseServiceTier == "" || hasNonZeroTokenUsage(detail) {
+	if responseServiceTier == "" || usage.HasTokenMeasurement(detail) {
 		preservedTier := b.detail.ResponseServiceTier
 		b.detail = detail
 		if b.detail.ResponseServiceTier == "" {
@@ -1006,68 +1006,72 @@ func ParseOpenAIUsage(data []byte) usage.Detail {
 }
 
 func hasOpenAIStyleUsageTokenFields(usageNode gjson.Result) bool {
-	if !usageNode.Exists() || !usageNode.IsObject() {
+	if usageNode.Raw == "" || usageNode.Raw == "null" {
 		return false
 	}
-	return usageNode.Get("total_tokens").Exists() || hasOpenAIStyleUsageBucketFields(usageNode)
+	if !usageNode.IsObject() {
+		return true
+	}
+	return usageNode.Get("total_tokens").Raw != "" || hasOpenAIStyleUsageBucketFields(usageNode)
 }
 
 func hasOpenAIStyleUsageBucketFields(usageNode gjson.Result) bool {
-	return usageNode.Get("prompt_tokens").Exists() ||
-		usageNode.Get("input_tokens").Exists() ||
-		usageNode.Get("completion_tokens").Exists() ||
-		usageNode.Get("output_tokens").Exists() ||
-		usageNode.Get("prompt_tokens_details.cached_tokens").Exists() ||
-		usageNode.Get("input_tokens_details.cached_tokens").Exists() ||
-		usageNode.Get("prompt_tokens_details.cache_write_tokens").Exists() ||
-		usageNode.Get("prompt_tokens_details.cache_creation_tokens").Exists() ||
-		usageNode.Get("input_tokens_details.cache_write_tokens").Exists() ||
-		usageNode.Get("input_tokens_details.cache_creation_tokens").Exists() ||
-		usageNode.Get("completion_tokens_details.reasoning_tokens").Exists() ||
-		usageNode.Get("output_tokens_details.reasoning_tokens").Exists()
+	return usageNode.Get("prompt_tokens").Raw != "" ||
+		usageNode.Get("input_tokens").Raw != "" ||
+		usageNode.Get("completion_tokens").Raw != "" ||
+		usageNode.Get("output_tokens").Raw != "" ||
+		usageNode.Get("prompt_tokens_details.cached_tokens").Raw != "" ||
+		usageNode.Get("input_tokens_details.cached_tokens").Raw != "" ||
+		usageNode.Get("prompt_tokens_details.cache_write_tokens").Raw != "" ||
+		usageNode.Get("prompt_tokens_details.cache_creation_tokens").Raw != "" ||
+		usageNode.Get("input_tokens_details.cache_write_tokens").Raw != "" ||
+		usageNode.Get("input_tokens_details.cache_creation_tokens").Raw != "" ||
+		usageNode.Get("completion_tokens_details.reasoning_tokens").Raw != "" ||
+		usageNode.Get("output_tokens_details.reasoning_tokens").Raw != ""
 }
 
 func parseOpenAIStyleUsageNode(usageNode gjson.Result) usage.Detail {
 	inputNode := usageNode.Get("prompt_tokens")
-	if !inputNode.Exists() {
+	if inputNode.Raw == "" {
 		inputNode = usageNode.Get("input_tokens")
 	}
 	outputNode := usageNode.Get("completion_tokens")
-	if !outputNode.Exists() {
+	if outputNode.Raw == "" {
 		outputNode = usageNode.Get("output_tokens")
 	}
 	detail := usage.Detail{
-		InputTokens:  inputNode.Int(),
-		OutputTokens: outputNode.Int(),
-		TotalTokens:  usageNode.Get("total_tokens").Int(),
+		InputTokens:  usageCountValue(inputNode),
+		OutputTokens: usageCountValue(outputNode),
+		TotalTokens:  usageCountValue(usageNode.Get("total_tokens")),
 	}
 	cached := usageNode.Get("prompt_tokens_details.cached_tokens")
-	if !cached.Exists() {
+	if cached.Raw == "" {
 		cached = usageNode.Get("input_tokens_details.cached_tokens")
 	}
-	if cached.Exists() {
-		detail.CachedTokens = cached.Int()
-		detail.CacheReadTokens = cached.Int()
+	if cached.Raw != "" {
+		detail.CachedTokens = usageCountValue(cached)
+		detail.CacheReadTokens = usageCountValue(cached)
 	}
-	cacheCreation := firstExistingUsageNode(
+	cacheCreation := firstReportedUsageNode(
 		usageNode,
 		"input_tokens_details.cache_creation_tokens",
 		"input_tokens_details.cache_write_tokens",
 		"prompt_tokens_details.cache_creation_tokens",
 		"prompt_tokens_details.cache_write_tokens",
 	)
-	if cacheCreation.Exists() {
-		detail.CacheCreationTokens = cacheCreation.Int()
+	if cacheCreation.Raw != "" {
+		detail.CacheCreationTokens = usageCountValue(cacheCreation)
 	}
 	reasoning := usageNode.Get("completion_tokens_details.reasoning_tokens")
-	if !reasoning.Exists() {
+	if reasoning.Raw == "" {
 		reasoning = usageNode.Get("output_tokens_details.reasoning_tokens")
 	}
-	if reasoning.Exists() {
-		detail.ReasoningTokens = reasoning.Int()
+	if reasoning.Raw != "" {
+		detail.ReasoningTokens = usageCountValue(reasoning)
 	}
+	detail.TokenEvidence = usageEvidence(usageNode, inputNode, outputNode, cached, cacheCreation, reasoning)
 	if hasOpenAIStyleUsageBucketFields(usageNode) {
-		if inputNode.Exists() && outputNode.Exists() {
+		if inputNode.Raw != "" && outputNode.Raw != "" {
 			detail.TokenBreakdown = usage.NewSubsetTokenBreakdown(
 				detail.InputTokens,
 				detail.CacheReadTokens,
@@ -1077,30 +1081,31 @@ func parseOpenAIStyleUsageNode(usageNode gjson.Result) usage.Detail {
 				detail.TotalTokens,
 			)
 		} else {
-			cacheReadTokens := detail.CacheReadTokens
-			cacheCreationTokens := detail.CacheCreationTokens
-			if !inputNode.Exists() {
-				cacheReadTokens = 0
-				cacheCreationTokens = 0
+			// Without an input/output total, native subset counters still prove
+			// a lower bound. Preserve those buckets; field evidence marks the
+			// incomplete total instead of throwing known cache/reasoning away.
+			inputTotal, outputTotal := detail.InputTokens, detail.OutputTokens
+			if inputNode.Raw == "" {
+				var valid bool
+				inputTotal, valid = safeUsageTokenSum(detail.CacheReadTokens, detail.CacheCreationTokens)
+				if !valid {
+					detail.TokenEvidence.Invalid = true
+				}
 			}
-			reasoningTokens := detail.ReasoningTokens
-			if !outputNode.Exists() {
-				reasoningTokens = 0
+			if outputNode.Raw == "" {
+				outputTotal = detail.ReasoningTokens
 			}
-			detail.TokenBreakdown = usage.NewPartialSubsetTokenBreakdown(
-				detail.InputTokens,
-				cacheReadTokens,
-				cacheCreationTokens,
-				detail.OutputTokens,
-				reasoningTokens,
-				detail.TotalTokens,
-			)
+			detail.TokenBreakdown = usage.NewPartialSubsetTokenBreakdown(inputTotal, detail.CacheReadTokens, detail.CacheCreationTokens, outputTotal, detail.ReasoningTokens, detail.TotalTokens)
 		}
 	} else {
 		detail.TokenBreakdown = usage.NewUnclassifiedTokenBreakdown(detail.TotalTokens)
 	}
 	if detail.TotalTokens == 0 {
 		detail.TotalTokens = detail.TokenBreakdown.TotalTokens
+	}
+	if detail.TokenEvidence.Invalid || (detail.TokenEvidence.Total && usageCountValue(usageNode.Get("total_tokens")) != detail.TokenBreakdown.TotalTokens) {
+		detail.TokenEvidence.Invalid = true
+		detail.TokenBreakdown = invalidUsageTokenBreakdown(detail.TotalTokens)
 	}
 	return detail
 }
@@ -1147,18 +1152,18 @@ func ParseClaudeStreamUsage(line []byte) (usage.Detail, bool) {
 }
 
 func parseClaudeUsageNode(usageNode gjson.Result) usage.Detail {
-	cacheReadTokens := usageNode.Get("cache_read_input_tokens").Int()
-	cacheCreationTokens := usageNode.Get("cache_creation_input_tokens").Int()
-	rawOutputTokens := usageNode.Get("output_tokens").Int()
+	cacheReadTokens := usageCountValue(usageNode.Get("cache_read_input_tokens"))
+	cacheCreationTokens := usageCountValue(usageNode.Get("cache_creation_input_tokens"))
+	rawOutputTokens := usageCountValue(usageNode.Get("output_tokens"))
 	// Anthropic reports thinking as a subset of output_tokens. Prefer the official
 	// nested field, then fall back to legacy aliases used by some gateways.
-	reasoningNode := firstExistingUsageNode(
+	reasoningNode := firstReportedUsageNode(
 		usageNode,
 		"output_tokens_details.thinking_tokens",
 		"output_tokens_details.reasoning_tokens",
 		"thinking_tokens",
 	)
-	reasoningTokens := reasoningNode.Int()
+	reasoningTokens := usageCountValue(reasoningNode)
 	if reasoningTokens < 0 {
 		reasoningTokens = 0
 	}
@@ -1172,7 +1177,7 @@ func parseClaudeUsageNode(usageNode gjson.Result) usage.Detail {
 		nonReasoningOutput = 0
 	}
 	detail := usage.Detail{
-		InputTokens:         usageNode.Get("input_tokens").Int(),
+		InputTokens:         usageCountValue(usageNode.Get("input_tokens")),
 		OutputTokens:        rawOutputTokens,
 		ReasoningTokens:     reasoningTokens,
 		CachedTokens:        cacheReadTokens,
@@ -1193,6 +1198,11 @@ func parseClaudeUsageNode(usageNode gjson.Result) usage.Detail {
 		detail.ReasoningTokens,
 		detail.TotalTokens,
 	)
+	detail.TokenEvidence = usageEvidence(usageNode, usageNode.Get("input_tokens"), usageNode.Get("output_tokens"), usageNode.Get("cache_read_input_tokens"), usageNode.Get("cache_creation_input_tokens"), reasoningNode)
+	if detail.TokenEvidence.Invalid || (detail.TokenEvidence.Total && usageCountValue(usageNode.Get("total_tokens")) != detail.TokenBreakdown.TotalTokens) {
+		detail.TokenEvidence.Invalid = true
+		detail.TokenBreakdown = invalidUsageTokenBreakdown(detail.TotalTokens)
+	}
 	return detail
 }
 

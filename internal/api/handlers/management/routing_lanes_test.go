@@ -41,7 +41,8 @@ func usageAt(id, lane, account string, at time.Time, status string) *feed.UsageE
 	event := feed.NewUsageEvent(id, at)
 	event.Lane, event.Project, event.Task = lane, "project:search", "task:301"
 	event.AccountID, event.Provider, event.Model, event.Status = account, "codex", "gpt-test", status
-	event.Tokens = feed.Tokens{Input: 10, Output: 5, Total: 15}
+	event.Tokens = &feed.Tokens{Input: 10, Output: 5, Total: 15}
+	event.TokenStatus, event.TokenFields = feed.TokensComplete, []string{"input", "output"}
 	return event
 }
 
@@ -287,5 +288,31 @@ func TestRoutingReadsRequireLoopbackAndFeed(t *testing.T) {
 		if rec := routingRequest(t, handle, http.MethodGet, "/v8/management/routing/lanes", "", nil); rec.Code != http.StatusServiceUnavailable {
 			t.Fatalf("without feed status = %d", rec.Code)
 		}
+	}
+}
+
+func TestRoutingLaneReportsIncompleteAttemptCoverage(t *testing.T) {
+	now := time.Date(2026, 10, 7, 14, 0, 0, 0, time.Local)
+	useRoutingClock(t, now)
+	h, _ := routingFixture(t, now)
+	for _, status := range []string{feed.TokensComplete, feed.TokensPartial, feed.TokensUnavailable, feed.TokensInvalid} {
+		event := usageAt("coverage-"+status, "coverage", "codex-b", now.Add(-time.Minute), "error")
+		event.TokenStatus = status
+		switch status {
+		case feed.TokensComplete:
+			event.Tokens = &feed.Tokens{}
+		case feed.TokensPartial:
+			event.Tokens = &feed.Tokens{Input: 8, Total: 8}
+			event.TokenFields = []string{"input"}
+		default:
+			event.Tokens = nil
+			event.TokenFields = []string{}
+		}
+		h.usageFeed.Write(event)
+	}
+	h.usageFeed.Flush()
+	lane := readLanes(t, h)["coverage"]
+	if lane.RequestsToday != 4 || lane.TokensToday != 8 || lane.PartialUsageToday != 1 || lane.UnavailableUsageToday != 1 || lane.InvalidUsageToday != 1 || lane.State != "failing" {
+		t.Fatalf("coverage lost in public lane read: %+v", lane)
 	}
 }

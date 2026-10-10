@@ -25,7 +25,8 @@ type Plugin struct {
 	dropped atomic.Uint64
 }
 
-// Dropped counts events discarded because their tokens could not be normalized.
+// Dropped counts attempts refused by the bounded feed writer; invalid token
+// measurements are retained as attempts and are never dropped for that reason.
 func (p *Plugin) Dropped() uint64 {
 	if p == nil {
 		return 0
@@ -78,14 +79,13 @@ func (p *Plugin) HandleUsage(_ context.Context, record usage.Record) {
 	if record.Failed {
 		event.Status = "error"
 	}
-	if tokens, ok := normalizeTokens(record); ok {
-		event.Tokens = tokens
-		event.CacheHit = cacheHit(event.Tokens)
-		p.store.Write(event)
-	} else {
+	event.Tokens, event.TokenStatus, event.TokenFields = normalizeTokens(record)
+	if event.Tokens != nil && event.TokenStatus == TokensComplete {
+		event.CacheHit = cacheHit(*event.Tokens)
+	}
+	if !p.store.Write(event) {
 		p.dropped.Add(1)
-		log.WithFields(log.Fields{"request_id": record.RequestID, "provider": record.Provider, "dropped_total": p.dropped.Load()}).
-			Warn("usage feed: token breakdown cannot be normalized, usage event dropped")
+		log.WithFields(log.Fields{"request_id": record.RequestID, "provider": record.Provider, "dropped_total": p.dropped.Load()}).Warn("usage feed: attempt refused by feed writer")
 	}
 	// Quota windows do not depend on token accounting: observe them regardless.
 
@@ -129,39 +129,39 @@ func (p *Plugin) accountHash(authID string) *string {
 	return AccountHash(email)
 }
 
-// normalizeTokens builds the feed's token view from the accounting breakdown so
-// every provider means the same thing: input includes cache reads and writes,
-// output includes reasoning, total = input + output. Providers report these
-// differently (Anthropic's input_tokens excludes cache reads; OpenAI's
-// prompt_tokens includes them), which is why the raw Detail counters are never
-// copied. A record with no tokens at all normalizes to zeros; a breakdown that
-// cannot satisfy the invariants is refused.
-func normalizeTokens(record usage.Record) (Tokens, bool) {
-	if !detailHasTokens(record.Detail) {
-		return Tokens{}, true
+// normalizeTokens retains request outcomes independently of token availability.
+// Complete and partial measurements use the existing canonical non-overlapping
+// buckets. Partial totals include explicitly unclassified tokens; consumers must
+// not mistake them for fully attributed input/output or for exhaustive coverage.
+func normalizeTokens(record usage.Record) (*Tokens, string, []string) {
+	fields := []string{}
+	if !usage.HasTokenMeasurement(record.Detail) {
+		return nil, TokensUnavailable, fields
 	}
-	breakdown := usage.EnsureTokenBreakdownForProvider(record.Detail, record.Provider, record.ExecutorType).TokenBreakdown
-	if !breakdown.Valid() || breakdown.UnclassifiedTokens != 0 {
-		return Tokens{}, false
+	detail := usage.EnsureTokenBreakdownForProvider(record.Detail, record.Provider, record.ExecutorType)
+	breakdown, evidence := detail.TokenBreakdown, detail.TokenEvidence
+	if evidence.Invalid || !breakdown.Valid() || breakdown.Quality == usage.TokenAccountingQualityInconsistent {
+		return nil, TokensInvalid, fields
 	}
-	tokens := Tokens{
-		Input:       breakdown.Input.TotalTokens,
-		CachedInput: breakdown.Input.CacheReadTokens,
-		CacheWrite:  breakdown.Input.CacheWriteTokens,
-		Output:      breakdown.Output.TotalTokens,
-		Reasoning:   breakdown.Output.ReasoningTokens,
-		Total:       breakdown.Input.TotalTokens + breakdown.Output.TotalTokens,
+	status := TokensComplete
+	if breakdown.Quality != usage.TokenAccountingQualityComplete || (evidence.Known && (!evidence.Input || !evidence.Output)) {
+		status = TokensPartial
 	}
-	if tokens.CachedInput > tokens.Input || tokens.Reasoning > tokens.Output || tokens.Total != tokens.Input+tokens.Output {
-		return Tokens{}, false
+	if evidence.Known {
+		if evidence.Input {
+			fields = append(fields, "input")
+		}
+		if evidence.Output {
+			fields = append(fields, "output")
+		}
+		if evidence.Total {
+			fields = append(fields, "total")
+		}
+	} else if status == TokensComplete {
+		fields = append(fields, "input", "output", "total")
 	}
-	return tokens, true
-}
-
-func detailHasTokens(detail usage.Detail) bool {
-	return detail.InputTokens != 0 || detail.OutputTokens != 0 || detail.ReasoningTokens != 0 ||
-		detail.CachedTokens != 0 || detail.CacheReadTokens != 0 || detail.CacheCreationTokens != 0 ||
-		detail.TotalTokens != 0 || detail.TokenBreakdown.TotalTokens != 0
+	tokens := &Tokens{Input: breakdown.Input.TotalTokens, CachedInput: breakdown.Input.CacheReadTokens, CacheWrite: breakdown.Input.CacheWriteTokens, Output: breakdown.Output.TotalTokens, Reasoning: breakdown.Output.ReasoningTokens, Total: breakdown.TotalTokens, Unclassified: breakdown.UnclassifiedTokens}
+	return tokens, status, fields
 }
 
 // cacheHit is unknown (nil) until the response reported input tokens.
