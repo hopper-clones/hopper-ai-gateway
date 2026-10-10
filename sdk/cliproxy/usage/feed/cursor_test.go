@@ -3,6 +3,7 @@ package feed
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -142,5 +143,113 @@ func TestReadNeverAdvancesPastPartialLineOfNewestFile(t *testing.T) {
 	}
 	if ids := eventIDs(t, page.Events); len(ids) != 1 || ids[0] != "c" || page.NextCursor != FormatCursor("2026-10-07T13Z.jsonl", int64(len("{\"id\":\"c\"}\n"))) {
 		t.Fatalf("page after rotation = %+v", page)
+	}
+}
+
+func TestReadThroughStopsAtFixedBoundaryAndReportsRetention(t *testing.T) {
+	dir := t.TempDir()
+	first := "2026-10-07T12Z.jsonl"
+	second := "2026-10-07T13Z.jsonl"
+	line := func(id string) string { return "{\"id\":\"" + id + "\"}\n" }
+	if err := os.WriteFile(filepath.Join(dir, first), []byte(line("a")+line("b")), 0600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, second), []byte(line("c")+line("later")), 0600); err != nil {
+		t.Fatal(err)
+	}
+	through := FormatCursor(second, int64(len(line("c"))))
+	cursor := ""
+	var ids []string
+	for i := 0; i < 4; i++ {
+		page, err := ReadThrough(dir, cursor, through, 1)
+		if err != nil {
+			t.Fatal(err)
+		}
+		ids = append(ids, eventIDs(t, page.Events)...)
+		if page.Replay == nil || page.Replay.Through != through || page.Coverage.Scope != "retained-files" {
+			t.Fatalf("metadata: %+v", page)
+		}
+		if page.Replay.Complete {
+			if page.HasMore || page.NextCursor != through {
+				t.Fatalf("completion: %+v", page)
+			}
+			break
+		}
+		if !page.HasMore || page.NextCursor == cursor {
+			t.Fatalf("no progress: %+v", page)
+		}
+		cursor = page.NextCursor
+	}
+	if strings.Join(ids, ",") != "a,b,c" {
+		t.Fatalf("replay ids: %v", ids)
+	}
+	// A removed starting cursor does not silently imply complete historical coverage.
+	if err := os.Remove(filepath.Join(dir, first)); err != nil {
+		t.Fatal(err)
+	}
+	page, err := ReadThrough(dir, FormatCursor(first, 0), through, 10)
+	if err != nil || !page.Coverage.MissingCursor || !page.Replay.Complete {
+		t.Fatalf("retired start: %+v %v", page, err)
+	}
+	// Even when retention removed the boundary, replay terminates at that exact
+	// opaque boundary and never consumes newer events.
+	if err := os.Remove(filepath.Join(dir, second)); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "2026-10-07T14Z.jsonl"), []byte(line("new")), 0600); err != nil {
+		t.Fatal(err)
+	}
+	page, err = ReadThrough(dir, "", through, 10)
+	if err != nil || len(page.Events) != 0 || page.NextCursor != through || !page.Coverage.MissingCursor || !page.Replay.Complete {
+		t.Fatalf("retired boundary: %+v %v", page, err)
+	}
+}
+
+func TestReadRefusesCorruptionAndInvalidByteBoundaries(t *testing.T) {
+	dir := t.TempDir()
+	name := "2026-10-07T12Z.jsonl"
+	valid := "{\"id\":\"a\"}\n"
+	if err := os.WriteFile(filepath.Join(dir, name), []byte(valid+"broken\n"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := Read(dir, "", 10); err == nil {
+		t.Fatal("corrupt page was accepted")
+	}
+	page, err := Read(dir, "", 1)
+	if err != nil || !page.HasMore {
+		t.Fatalf("corruption after page must be visited: %+v %v", page, err)
+	}
+	for _, offset := range []int64{1, 10000} {
+		if _, err := Read(dir, FormatCursor(name, offset), 10); err == nil {
+			t.Fatalf("offset %d accepted", offset)
+		}
+		if _, err := ReadThrough(dir, "", FormatCursor(name, offset), 10); err == nil {
+			t.Fatalf("boundary %d accepted", offset)
+		}
+	}
+	if _, err := ReadThrough(dir, FormatCursor(name, int64(len(valid))), FormatCursor(name, 0), 10); err == nil {
+		t.Fatal("reversed range accepted")
+	}
+	if _, err := ReadThrough(dir, "", "", 10); err == nil {
+		t.Fatal("empty boundary accepted")
+	}
+}
+
+func TestReadReportsAbandonedTailButWaitsForActiveTail(t *testing.T) {
+	dir := t.TempDir()
+	name := "2026-10-07T12Z.jsonl"
+	if err := os.WriteFile(filepath.Join(dir, name), []byte("{\"id\":\"a\"}\nunfinished"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	page, err := Read(dir, "", 10)
+	if err != nil || page.Coverage.TornFiles != 0 {
+		t.Fatalf("active tail: %+v %v", page, err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "2026-10-07T13Z.jsonl"), []byte("{\"id\":\"b\"}\n"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	page, err = Read(dir, page.NextCursor, 10)
+	if err != nil || page.Coverage.TornFiles != 1 || len(page.Events) != 1 {
+		t.Fatalf("abandoned tail: %+v %v", page, err)
 	}
 }

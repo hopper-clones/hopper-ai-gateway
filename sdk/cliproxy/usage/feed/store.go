@@ -61,6 +61,11 @@ func (s *Store) Read(cursor string, limit int) (Page, error) {
 	return Read(s.dir, cursor, limit)
 }
 
+// ReadThrough reads a bounded retained-history page without changing acknowledgements.
+func (s *Store) ReadThrough(cursor, through string, limit int) (Page, error) {
+	return ReadThrough(s.dir, cursor, through, limit)
+}
+
 // Ack persists a consumer's cursor.
 func (s *Store) Ack(consumer, cursor string) error {
 	if s == nil {

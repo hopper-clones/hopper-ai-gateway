@@ -144,3 +144,48 @@ func TestDeleteUsageFeedCursorDropsConsumer(t *testing.T) {
 		t.Fatalf("cursors after delete = %+v err=%v", cursors, err)
 	}
 }
+
+func TestUsageFeedBoundedReplayDoesNotChangeAcknowledgement(t *testing.T) {
+	at := time.Date(2026, 10, 7, 12, 0, 0, 0, time.UTC)
+	store, err := feed.Open(t.TempDir(), feed.WithClock(func() time.Time { return at }))
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = store.Close() })
+	store.Write(feed.NewUsageEvent("old", at))
+	store.Flush()
+	boundary, err := store.Read("", 10)
+	if err != nil {
+		t.Fatal(err)
+	}
+	store.Write(feed.NewUsageEvent("live", at))
+	store.Flush()
+	live, err := store.Read(boundary.NextCursor, 10)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := store.Ack("capacity", live.NextCursor); err != nil {
+		t.Fatal(err)
+	}
+	h := &Handler{}
+	h.SetUsageFeed(store)
+	rec := feedRequest(t, h, http.MethodGet, "/v8/management/usage/feed?through="+boundary.NextCursor+"&limit=1", "", "127.0.0.1:4321")
+	var page feed.Page
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status %d: %s", rec.Code, rec.Body.String())
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &page); err != nil {
+		t.Fatal(err)
+	}
+	if len(page.Events) != 1 || page.Replay == nil || !page.Replay.Complete || page.Replay.Through != boundary.NextCursor || page.NextCursor != boundary.NextCursor || page.HasMore {
+		t.Fatalf("replay: %+v", page)
+	}
+	cursors, err := store.Cursors()
+	if err != nil || cursors["capacity"].Cursor != live.NextCursor {
+		t.Fatalf("ack regressed: %+v %v", cursors, err)
+	}
+	rec = feedRequest(t, h, http.MethodGet, "/v8/management/usage/feed?through=bad", "", "127.0.0.1:4321")
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("invalid boundary accepted: %d", rec.Code)
+	}
+}

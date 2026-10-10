@@ -17,27 +17,38 @@ import (
 )
 
 const (
-	// DefaultReadLimit applies when a consumer passes no limit.
 	DefaultReadLimit = 500
-	// MaxReadLimit caps one page.
-	MaxReadLimit = 5000
+	MaxReadLimit     = 5000
 )
 
 var hourFilePattern = regexp.MustCompile(`^\d{4}-\d{2}-\d{2}T\d{2}Z\.jsonl$`)
 
-// Page is one read of the feed.
+// Coverage describes retained bytes, never a claim of complete historical usage.
+// MissingCursor also covers a replay boundary file removed by retention.
+type Coverage struct {
+	Scope         string `json:"scope"`
+	MissingCursor bool   `json:"missing_cursor"`
+	TornFiles     int    `json:"torn_files"`
+}
+
+type Replay struct {
+	Through  string `json:"through"`
+	Complete bool   `json:"complete"`
+}
+
+// Page is one read of the feed. Replay is present only for a bounded read.
 type Page struct {
 	Events     []json.RawMessage `json:"events"`
 	NextCursor string            `json:"next_cursor"`
 	HasMore    bool              `json:"has_more"`
+	Coverage   Coverage          `json:"coverage"`
+	Replay     *Replay           `json:"replay,omitempty"`
 }
 
-// FormatCursor renders the opaque cursor "<file>:<byte offset>".
 func FormatCursor(file string, offset int64) string {
 	return file + ":" + strconv.FormatInt(offset, 10)
 }
 
-// ParseCursor validates and splits a cursor. Only hourly feed file names are accepted.
 func ParseCursor(cursor string) (file string, offset int64, err error) {
 	file, rawOffset, found := strings.Cut(cursor, ":")
 	if !found || !hourFilePattern.MatchString(file) {
@@ -50,7 +61,6 @@ func ParseCursor(cursor string) (file string, offset int64, err error) {
 	return file, offset, nil
 }
 
-// listFiles returns the hourly feed files in dir sorted oldest first.
 func listFiles(dir string) ([]string, error) {
 	entries, err := os.ReadDir(dir)
 	if err != nil {
@@ -69,10 +79,22 @@ func listFiles(dir string) ([]string, error) {
 	return files, nil
 }
 
-// Read returns up to limit events starting at cursor. An empty cursor starts at
-// the oldest retained file. A cursor naming a retired file resumes at the next
-// file. A partially written last line is left for the next read.
+// Read starts at cursor, or the oldest retained file when cursor is empty.
+// A retired cursor resumes at the next retained file with an explicit gap.
 func Read(dir, cursor string, limit int) (Page, error) {
+	return readRange(dir, cursor, "", limit)
+}
+
+// ReadThrough replays only retained bytes up to the exclusive byte boundary
+// through. Live writes cannot move that boundary. No acknowledgement is changed.
+func ReadThrough(dir, cursor, through string, limit int) (Page, error) {
+	if through == "" {
+		return Page{}, errors.New("usage feed: replay requires a boundary")
+	}
+	return readRange(dir, cursor, through, limit)
+}
+
+func readRange(dir, cursor, through string, limit int) (Page, error) {
 	if limit <= 0 {
 		limit = DefaultReadLimit
 	}
@@ -89,83 +111,150 @@ func Read(dir, cursor string, limit int) (Page, error) {
 			return Page{}, err
 		}
 	}
+	endFile, endOffset := "", int64(0)
+	if through != "" {
+		if endFile, endOffset, err = ParseCursor(through); err != nil {
+			return Page{}, err
+		}
+		if file > endFile || file == endFile && offset > endOffset {
+			return Page{}, errors.New("usage feed: cursor exceeds replay boundary")
+		}
+	}
+	page := Page{Events: make([]json.RawMessage, 0, limit), NextCursor: cursor, Coverage: Coverage{Scope: "retained-files"}}
+	contains := func(name string) bool {
+		i := sort.SearchStrings(files, name)
+		return i < len(files) && files[i] == name
+	}
+	page.Coverage.MissingCursor = file != "" && !contains(file)
+	if through != "" {
+		page.Replay = &Replay{Through: through}
+		page.Coverage.MissingCursor = page.Coverage.MissingCursor || !contains(endFile)
+	}
+	finishReplay := func() Page { page.NextCursor = through; page.HasMore = false; page.Replay.Complete = true; return page }
 	index := sort.SearchStrings(files, file)
 	if index < len(files) && files[index] != file {
-		// The cursor file was retired: resume at the next retained file.
 		offset = 0
 	}
-	if index >= len(files) {
-		return Page{Events: []json.RawMessage{}, NextCursor: cursor}, nil
-	}
-	page := Page{Events: make([]json.RawMessage, 0, limit)}
 	for index < len(files) {
 		name := files[index]
-		events, next, err := readLines(filepath.Join(dir, name), offset, limit-len(page.Events))
+		if through != "" && name > endFile {
+			return finishReplay(), nil
+		}
+		end := int64(-1)
+		if through != "" && name == endFile {
+			end = endOffset
+		}
+		segment, err := readSegment(filepath.Join(dir, name), offset, end, limit-len(page.Events))
 		if err != nil {
 			return Page{}, err
 		}
-		page.Events = append(page.Events, events...)
-		page.NextCursor = FormatCursor(name, next)
+		if segment.missing {
+			page.Coverage.MissingCursor = true
+		}
+		page.Events = append(page.Events, segment.events...)
+		page.NextCursor = FormatCursor(name, segment.next)
+		if end >= 0 && (segment.next == end || segment.missing) {
+			return finishReplay(), nil
+		}
 		if len(page.Events) >= limit {
-			page.HasMore = moreAfter(dir, files, index, next)
+			if through != "" {
+				page.HasMore = true
+			} else {
+				page.HasMore = moreAfter(dir, files, index, segment.next)
+			}
 			return page, nil
 		}
-		// The newest file may still end in a line the writer is completing:
-		// wait there. An older file's torn tail will never complete, so move on.
-		if index+1 >= len(files) {
+		if segment.partial && (index+1 < len(files) || through != "" && name < endFile) {
+			page.Coverage.TornFiles++
+		}
+		if through == "" && index+1 >= len(files) {
 			return page, nil
 		}
 		index, offset = index+1, 0
 	}
+	if through != "" {
+		return finishReplay(), nil
+	}
 	return page, nil
 }
 
-// readLines reads complete lines from offset, stopping at limit or at a line
-// without a trailing newline. It returns the events and the next byte offset.
-func readLines(path string, offset int64, limit int) ([]json.RawMessage, int64, error) {
+type segment struct {
+	events  []json.RawMessage
+	next    int64
+	partial bool
+	missing bool
+}
+
+// readSegment admits complete JSON lines only. Corruption fails the entire page,
+// leaving the consumer's committed cursor unchanged. end=-1 reads to current EOF.
+func readSegment(path string, offset, end int64, limit int) (segment, error) {
+	result := segment{next: offset}
 	file, err := os.Open(path)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
-			return nil, offset, nil
+			result.missing = true
+			return result, nil
 		}
-		return nil, 0, fmt.Errorf("usage feed: open %s: %w", path, err)
+		return result, fmt.Errorf("usage feed: open %s: %w", path, err)
 	}
 	defer func() {
-		if errClose := file.Close(); errClose != nil {
-			log.WithError(errClose).Warn("usage feed: close feed file")
+		if e := file.Close(); e != nil {
+			log.WithError(e).Warn("usage feed: close feed file")
 		}
 	}()
-	if _, err := file.Seek(offset, io.SeekStart); err != nil {
-		return nil, 0, fmt.Errorf("usage feed: seek %s: %w", path, err)
+	info, err := file.Stat()
+	if err != nil {
+		return result, err
 	}
-	reader := bufio.NewReader(file)
-	events := make([]json.RawMessage, 0, limit)
-	for len(events) < limit {
-		line, errRead := reader.ReadBytes('\n')
-		if errRead != nil {
-			// io.EOF without a newline is a partially written line; leave it.
-			if !errors.Is(errRead, io.EOF) {
-				return nil, 0, fmt.Errorf("usage feed: read %s: %w", path, errRead)
+	if offset > info.Size() || end > info.Size() {
+		return result, errors.New("usage feed: cursor exceeds retained file size")
+	}
+	for _, boundary := range []int64{offset, end} {
+		if boundary <= 0 {
+			continue
+		}
+		b := []byte{0}
+		if _, err = file.ReadAt(b, boundary-1); err != nil {
+			return result, err
+		}
+		if b[0] != '\n' {
+			return result, errors.New("usage feed: cursor is not a complete line boundary")
+		}
+	}
+	if _, err = file.Seek(offset, io.SeekStart); err != nil {
+		return result, err
+	}
+	var input io.Reader = file
+	if end >= 0 {
+		input = io.LimitReader(file, end-offset)
+	}
+	reader := bufio.NewReader(input)
+	for len(result.events) < limit {
+		line, readErr := reader.ReadBytes('\n')
+		if readErr != nil {
+			if !errors.Is(readErr, io.EOF) {
+				return result, readErr
 			}
+			result.partial = len(line) > 0
 			break
 		}
-		offset += int64(len(line))
-		trimmed := strings.TrimRight(string(line), "\r\n")
+		result.next += int64(len(line))
+		trimmed := strings.TrimSpace(string(line))
 		if trimmed == "" {
 			continue
 		}
 		if !json.Valid([]byte(trimmed)) {
-			log.WithField("file", filepath.Base(path)).Warn("usage feed: skipping corrupt line")
-			continue
+			return result, fmt.Errorf("usage feed: corrupt JSON line in %s at byte %d", filepath.Base(path), result.next-int64(len(line)))
 		}
-		events = append(events, json.RawMessage(trimmed))
+		result.events = append(result.events, json.RawMessage(trimmed))
 	}
-	return events, offset, nil
+	return result, nil
 }
 
-// moreAfter reports whether complete data remains after offset in files[index] or in later files.
 func moreAfter(dir string, files []string, index int, offset int64) bool {
-	if rest, _, err := readLines(filepath.Join(dir, files[index]), offset, 1); err == nil && len(rest) > 0 {
+	rest, err := readSegment(filepath.Join(dir, files[index]), offset, -1, 1)
+	// A corrupt next line must trigger another read and an explicit failure.
+	if err != nil || len(rest.events) > 0 {
 		return true
 	}
 	for _, name := range files[index+1:] {

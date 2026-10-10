@@ -88,7 +88,7 @@ socket peer must be loopback (forwarded headers do not count), exactly like
 
 | Path | Method | Body / query | Response |
 | --- | --- | --- | --- |
-| `/usage/feed` | GET | `cursor=` (omit to start at the oldest retained file), `limit=` (default 500, max 5000) | `{"events":[…],"next_cursor":"<file>:<offset>","has_more":bool}` |
+| `/usage/feed` | GET | `cursor=` (omit to start at the oldest retained file), `limit=` (default 500, max 5000), optional `through=` | `{"events":[…],"next_cursor":"<file>:<offset>","has_more":bool,"coverage":{…},"replay":{…}}` |
 | `/usage/feed/ack` | POST | `{"consumer":"capacity","cursor":"…"}` | `{"status":"ok", …}`; persisted to `cursors.json` |
 | `/usage/feed/cursors` | GET | | `{"cursors":{"capacity":{"cursor":"…","acked_at":"…"}}}` |
 | `/usage/feed/cursors/:consumer` | DELETE | | `{"status":"ok"}` or 404; the consumer no longer holds retention |
@@ -103,7 +103,27 @@ socket peer must be loopback (forwarded headers do not count), exactly like
 
 The cursor is opaque: `"<file>:<byte offset>"`. A reader that stops on a partially
 written last line gets the same cursor back and continues once the line is complete.
-A cursor naming a retired file resumes at the next retained file.
+A cursor naming a retired file resumes at the next retained file and sets
+`coverage.missing_cursor`. Every page reports
+`coverage: {scope: "retained-files", missing_cursor: boolean, torn_files: number}`.
+A torn tail in an older hourly file is counted when advancing past it; an active
+last-file tail waits for completion. Corrupt complete JSON lines and invalid byte
+boundaries fail the page instead of silently skipping evidence.
+
+For upgrade repair, capture the consumer's committed cursor once as `through` and
+read from an independent replay cursor (initially empty). Each page echoes
+`replay: {through, complete}`. Reads never pass the fixed byte boundary, even if
+new live events arrive. Completion sets `next_cursor` to exactly `through` and
+`has_more` to false. If retention removed the boundary, replay still terminates
+there and reports `missing_cursor`; it never substitutes a newer boundary.
+
+A replay qualifies only currently retained bytes, not all historical requests.
+The replay cursor must never be acknowledged in place of the live cursor. Persist
+replay progress with its ingested records; continue ordinary live collection and
+acknowledge only committed live positions. A consumer must verify the echoed
+replay and coverage metadata: older producers may ignore `through`. Treat that as
+unsupported repair while keeping live collection available. Retained-history
+replay does not recover failed attempts that an old producer never emitted.
 
 `/routing/pick` runs the manager's read-only selection path (`PeekAuth`) for the
 model: the configured selector answers without advancing round-robin state,

@@ -41,7 +41,7 @@ func (h *Handler) usageFeedStore(c *gin.Context) (*feed.Store, bool) {
 	return store, true
 }
 
-// GetUsageFeed serves GET /usage/feed?cursor=&limit=.
+// GetUsageFeed serves GET /usage/feed?cursor=&limit=&through=.
 func (h *Handler) GetUsageFeed(c *gin.Context) {
 	store, ok := h.usageFeedStore(c)
 	if !ok {
@@ -63,7 +63,20 @@ func (h *Handler) GetUsageFeed(c *gin.Context) {
 			return
 		}
 	}
-	page, err := store.Read(cursor, limit)
+	through := strings.TrimSpace(c.Query("through"))
+	if through != "" {
+		if _, _, err := feed.ParseCursor(through); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"code": "USAGE_FEED_BAD_CURSOR"})
+			return
+		}
+	}
+	var page feed.Page
+	var err error
+	if through != "" {
+		page, err = store.ReadThrough(cursor, through, limit)
+	} else {
+		page, err = store.Read(cursor, limit)
+	}
 	if err != nil {
 		log.WithError(err).Error("usage feed: read")
 		c.JSON(http.StatusInternalServerError, gin.H{"code": "USAGE_FEED_READ_FAILED"})
